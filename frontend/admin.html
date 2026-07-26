@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - The Malayalam Joke App</title>
+  <link rel="stylesheet" href="/src/admin/admin.css" />
+</head>
+<body>
+  <div id="login-view">
+    <form id="login-form" class="admin-card">
+      <h1>Admin Login</h1>
+      <input type="email" id="email" placeholder="Email" required autocomplete="username" />
+      <input type="password" id="password" placeholder="Password" required autocomplete="current-password" />
+      <button type="submit" class="btn-accent">Sign In</button>
+      <p id="login-error" class="error"></p>
+    </form>
+  </div>
+
+  <div id="dashboard-view" class="hidden">
+    <header class="admin-header">
+      <h1>Joke Moderation</h1>
+      <button id="logout-btn">Log out</button>
+    </header>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-value" id="stat-total">-</span>
+        <span class="stat-label">Total Jokes</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-active">-</span>
+        <span class="stat-label">Active</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-quarantine">-</span>
+        <span class="stat-label">Quarantine</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-deleted">-</span>
+        <span class="stat-label">Deleted</span>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="tabs" id="status-tabs">
+        <button class="tab active" data-status="quarantine">Quarantine</button>
+        <button class="tab" data-status="active">Active</button>
+        <button class="tab" data-status="deleted">Deleted</button>
+        <button class="tab" data-status="all">All</button>
+      </div>
+      <button id="new-joke-btn" class="btn-accent">+ New Joke</button>
+    </div>
+
+    <!-- Create / Edit form - shared, toggled between the two modes -->
+    <form id="joke-form" class="admin-card joke-form hidden">
+      <h2 id="joke-form-title">New Joke</h2>
+      <input type="hidden" id="joke-form-id" />
+
+      <label>Type</label>
+      <select id="joke-form-type">
+        <option value="single">Single Joke</option>
+        <option value="qna">Question &amp; Answer</option>
+      </select>
+
+      <label>Question / Joke text</label>
+      <textarea id="joke-form-question" maxlength="1000" required></textarea>
+
+      <label id="joke-form-answer-label" class="hidden">Answer</label>
+      <textarea id="joke-form-answer" class="hidden" maxlength="1000"></textarea>
+
+      <label>Status</label>
+      <select id="joke-form-status">
+        <option value="active">active</option>
+        <option value="quarantine">quarantine</option>
+        <option value="deleted">deleted</option>
+      </select>
+
+      <label>Replace image (optional)</label>
+      <input type="file" id="joke-form-image" accept="image/png,image/jpeg,image/webp" />
+
+      <div class="joke-form-actions">
+        <button type="submit" class="btn-accent">Save</button>
+        <button type="button" id="joke-form-cancel">Cancel</button>
+      </div>
+      <p id="joke-form-status-msg"></p>
+    </form>
+
+    <h2 id="list-title">Quarantine Queue</h2>
+    <div id="queue-root">
+      <p>Loading...</p>
+    </div>
+  </div>
+
+  <script type="module" src="/src/admin/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Malayalam Joke App</title>
+  <link rel="preconnect" href="https://firestore.googleapis.com" />
+  <link rel="preconnect" href="https://res.cloudinary.com" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div class="card">
+      <div id="joke-root">
+        <p class="empty-state">Loading a chali...</p>
+      </div>
+
+      <div class="vote-row">
+        <button id="upvote-btn" class="vote-btn">▲ Upvote</button>
+        <button id="downvote-btn" class="vote-btn">▼ Downvote</button>
+      </div>
+
+      <div class="next-row">
+        <button id="next-btn" class="next-btn">Next Joke</button>
+      </div>
+
+      <div class="submit-toggle">
+        <button id="show-submit-btn" type="button">Got a chali? Submit one →</button>
+      </div>
+
+      <form id="submit-form" class="hidden">
+        <select id="joke-type">
+          <option value="single">Single Joke</option>
+          <option value="qna">Question &amp; Answer</option>
+        </select>
+
+        <textarea id="joke-question" placeholder="Type your chali..." required maxlength="1000"></textarea>
+        <span class="char-count" id="question-count">0 / 1000</span>
+
+        <textarea id="joke-answer" class="hidden" placeholder="Answer..." maxlength="1000"></textarea>
+        <span class="char-count hidden" id="answer-count">0 / 1000</span>
+
+        <input type="file" id="joke-image" accept="image/png,image/jpeg,image/webp" />
+        <img id="joke-image-preview" class="hidden" alt="preview" />
+
+        <div class="submit-form-actions">
+          <button type="submit" class="btn-accent">Submit</button>
+          <button type="button" id="submit-cancel-btn">Cancel</button>
+        </div>
+        <p id="submit-status"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

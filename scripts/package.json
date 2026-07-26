@@ -1,0 +1,7 @@
+{
+  "name": "malayalam-joke-app-seed-script",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

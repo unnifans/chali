@@ -1,0 +1,222 @@
+:root {
+  --bg-primary: #2F4052;
+  --bg-secondary: #F2F4F8;
+  --accent-green: #4A7C59;
+  --accent-red: #b8473c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: white;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  padding: 24px;
+}
+
+.hidden { display: none !important; }
+
+#login-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+}
+
+.admin-card {
+  background: var(--bg-secondary);
+  color: #222;
+  padding: 32px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-card h1 { margin: 0 0 8px 0; font-size: 1.3rem; }
+
+.admin-card input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.error { color: var(--accent-red); font-size: 0.9rem; min-height: 1.2em; margin: 0; }
+
+button {
+  font-family: inherit;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+}
+
+.btn-accent { background: var(--accent-green); color: white; font-weight: 600; }
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 800px;
+  margin: 0 auto 20px auto;
+}
+
+.admin-header button {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.stats-row {
+  display: flex;
+  gap: 16px;
+  max-width: 800px;
+  margin: 0 auto 30px auto;
+}
+
+.stat-card {
+  flex: 1;
+  background: var(--bg-secondary);
+  color: #222;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-value { display: block; font-size: 1.8rem; font-weight: 700; }
+.stat-label { font-size: 0.85rem; color: #666; }
+
+#queue-root, h2 {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.queue-item {
+  background: var(--bg-secondary);
+  color: #222;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.queue-item .muted { color: #666; font-size: 0.9rem; margin: 4px 0; }
+
+.queue-actions { display: flex; gap: 10px; margin-top: 10px; }
+
+.btn-approve { background: var(--accent-green); color: white; }
+.btn-delete { background: var(--accent-red); color: white; }
+
+.toolbar {
+  max-width: 800px;
+  margin: 0 auto 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  background: rgba(255,255,255,0.08);
+  color: white;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-weight: 600;
+}
+
+.tab.active {
+  background: var(--accent-green);
+}
+
+.joke-form {
+  max-width: 800px;
+  margin: 0 auto 24px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.joke-form h2 { margin: 0 0 4px 0; }
+
+.joke-form label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+  margin-top: 4px;
+}
+
+.joke-form select,
+.joke-form textarea,
+.joke-form input[type="file"] {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.joke-form textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.joke-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.joke-form-actions button[type="button"] {
+  background: #ddd;
+  color: #333;
+}
+
+#joke-form-status-msg {
+  font-size: 0.85rem;
+  min-height: 1.2em;
+  margin: 4px 0 0 0;
+}
+
+.queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.queue-item-body { flex: 1; }
+
+.status-pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+.status-pill.active { background: #d7ecdd; color: #2c6e3f; }
+.status-pill.quarantine { background: #fbe6c9; color: #8a5a10; }
+.status-pill.deleted { background: #f3d0cd; color: #92322a; }
+
+.queue-item-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.btn-edit { background: #3f5b78; color: white; }
+.btn-restore { background: var(--accent-green); color: white; }

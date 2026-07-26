@@ -1,0 +1,76 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null;
+      // Stricter option: return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isUnchangedExcept(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(fields);
+    }
+
+    match /jokes/{jokeId} {
+
+      // READ: public can only read active jokes; admin can read everything
+      allow read: if resource.data.status == 'active' || isAdmin();
+
+      // CREATE: public submissions are locked to quarantine + the exact
+      // shape below. Admins can create with any status/fields (used by the
+      // admin panel's "New Joke" form).
+      allow create: if isAdmin() || (
+                    request.resource.data.status == 'quarantine'
+                    && request.resource.data.type in ['qna', 'single']
+                    && request.resource.data.upvotes == 5
+                    && request.resource.data.downvotes == 0
+                    && request.resource.data.submittedBy == 'anonymous'
+                    && request.resource.data.question is string
+                    && request.resource.data.question.size() > 0
+                    && request.resource.data.question.size() < 1000
+                    && (request.resource.data.type == 'single'
+                        || (request.resource.data.answer is string
+                            && request.resource.data.answer.size() < 1000))
+                    && (request.resource.data.imageUrl == null
+                        || (request.resource.data.imageUrl is string
+                            && request.resource.data.imageUrl.matches(
+                                 'https://res\\.cloudinary\\.com/.*')))
+                    && request.resource.data.timestamp == request.time
+                    );
+
+      // UPDATE: public vote (+1 to exactly one field, plus a correctly
+      // recomputed status) OR admin full access. This replaces the old
+      // Cloud Function trigger — no Blaze plan needed, the quarantine
+      // decision is validated right here as part of the same write.
+      allow update: if
+        (
+          resource.data.status == 'active' &&
+          isUnchangedExcept(['upvotes', 'downvotes', 'status']) &&
+          (
+            (
+              request.resource.data.upvotes == resource.data.upvotes + 1 &&
+              request.resource.data.downvotes == resource.data.downvotes
+            ) ||
+            (
+              request.resource.data.downvotes == resource.data.downvotes + 1 &&
+              request.resource.data.upvotes == resource.data.upvotes
+            )
+          ) &&
+          request.resource.data.status == (
+            (request.resource.data.upvotes - request.resource.data.downvotes) < 3
+              ? 'quarantine' : 'active'
+          )
+        ) ||
+        isAdmin();
+
+      // DELETE: soft-delete only - admin sets status to "deleted" via update
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
