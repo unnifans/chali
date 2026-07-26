@@ -10,43 +10,76 @@
 </head>
 <body>
   <div class="app-shell">
-    <div class="card">
+    <!-- Main Joke Card -->
+    <div class="card" id="joke-card">
+      <h1 class="card-title">ചളി</h1>
+
       <div id="joke-root">
         <p class="empty-state">Loading a chali...</p>
       </div>
 
       <div class="vote-row">
-        <button id="upvote-btn" class="vote-btn">▲ Upvote</button>
-        <button id="downvote-btn" class="vote-btn">▼ Downvote</button>
+        <button id="upvote-btn" class="vote-btn" aria-label="Upvote">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+        </button>
+        <span class="vote-score" id="vote-score">0</span>
+        <button id="downvote-btn" class="vote-btn" aria-label="Downvote">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
       </div>
 
       <div class="next-row">
-        <button id="next-btn" class="next-btn">Next Joke</button>
+        <button id="next-btn" class="next-btn">Next Joke →</button>
       </div>
 
       <div class="submit-toggle">
-        <button id="show-submit-btn" type="button">Got a chali? Submit one →</button>
+        <span>Got a chali? <button id="show-submit-btn" type="button">Submit one</button></span>
+      </div>
+    </div>
+
+    <!-- Submit Panel (slides in) -->
+    <div id="submit-panel" class="submit-panel hidden">
+      <div class="submit-header">
+        <button id="back-btn" class="icon-btn" type="button" aria-label="Go back">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h2>Submit</h2>
       </div>
 
-      <form id="submit-form" class="hidden">
-        <select id="joke-type">
-          <option value="single">Single Joke</option>
-          <option value="qna">Question &amp; Answer</option>
-        </select>
+      <div class="info-banner">
+        <span class="bulb">💡</span>
+        <p>Keep it short, punchy, and uniquely Malayali! No spamming, only quality chalis allowed.</p>
+      </div>
 
-        <textarea id="joke-question" placeholder="Type your chali..." required maxlength="1000"></textarea>
-        <span class="char-count" id="question-count">0 / 1000</span>
-
-        <textarea id="joke-answer" class="hidden" placeholder="Answer..." maxlength="1000"></textarea>
-        <span class="char-count hidden" id="answer-count">0 / 1000</span>
-
-        <input type="file" id="joke-image" accept="image/png,image/jpeg,image/webp" />
-        <img id="joke-image-preview" class="hidden" alt="preview" />
-
-        <div class="submit-form-actions">
-          <button type="submit" class="btn-accent">Submit</button>
-          <button type="button" id="submit-cancel-btn">Cancel</button>
+      <form id="submit-form">
+        <label class="field-label">JOKE TYPE</label>
+        <div class="type-toggle">
+          <button type="button" class="type-option active" data-value="single">Statement</button>
+          <button type="button" class="type-option" data-value="qna">Question &amp; Answer</button>
         </div>
+        <input type="hidden" id="joke-type" value="single" />
+
+        <label class="field-label" for="joke-question">YOUR CHALI</label>
+        <textarea id="joke-question" placeholder="Type your chali..." required maxlength="300"></textarea>
+        <span class="char-count" id="question-count">0 / 300</span>
+
+        <textarea id="joke-answer" class="hidden" placeholder="Answer..." maxlength="300"></textarea>
+        <span class="char-count hidden" id="answer-count">0 / 300</span>
+
+        <label class="field-label">ADD VISUALS (OPTIONAL)</label>
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="joke-image" accept="image/png,image/jpeg,image/webp" hidden />
+          <div class="upload-placeholder" id="upload-placeholder">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Tap to upload a meme or reaction image</span>
+          </div>
+          <img id="joke-image-preview" class="hidden" alt="preview" />
+          <button type="button" class="remove-image hidden" id="remove-image">✕</button>
+        </div>
+
+        <button type="submit" class="btn-submit">➤ Submit Chali</button>
+        <button type="button" id="submit-cancel-btn" class="btn-cancel">Cancel</button>
+
         <p id="submit-status"></p>
       </form>
     </div>

@@ -38,77 +38,116 @@ export async function uploadImageToCloudinary(file) {
 
 export function initSubmitForm() {
   const showBtn = document.getElementById('show-submit-btn');
+  const backBtn = document.getElementById('back-btn');
   const cancelBtn = document.getElementById('submit-cancel-btn');
+  const jokeCard = document.getElementById('joke-card');
+  const submitPanel = document.getElementById('submit-panel');
+
   const form = document.getElementById('submit-form');
-  const typeSelect = document.getElementById('joke-type');
+  const typeHidden = document.getElementById('joke-type');
+  const typeOptions = form.querySelectorAll('.type-option');
   const questionField = document.getElementById('joke-question');
   const answerField = document.getElementById('joke-answer');
   const answerCount = document.getElementById('answer-count');
   const questionCount = document.getElementById('question-count');
+
   const imageInput = document.getElementById('joke-image');
+  const uploadZone = document.getElementById('upload-zone');
+  const uploadPlaceholder = document.getElementById('upload-placeholder');
   const imagePreview = document.getElementById('joke-image-preview');
+  const removeImageBtn = document.getElementById('remove-image');
   const statusEl = document.getElementById('submit-status');
 
   function openForm() {
-    form.classList.remove('hidden');
-    showBtn.classList.add('hidden');
+    jokeCard.classList.add('hidden');
+    submitPanel.classList.remove('hidden');
     questionField.focus();
   }
 
   function closeForm() {
+    submitPanel.classList.add('hidden');
+    jokeCard.classList.remove('hidden');
+    resetForm();
+  }
+
+  function resetForm() {
     form.reset();
-    form.classList.add('hidden');
-    showBtn.classList.remove('hidden');
+    typeHidden.value = 'single';
+    typeOptions.forEach(btn => btn.classList.toggle('active', btn.dataset.value === 'single'));
     answerField.classList.add('hidden');
     answerCount.classList.add('hidden');
     imagePreview.classList.add('hidden');
     imagePreview.removeAttribute('src');
+    uploadPlaceholder.classList.remove('hidden');
+    removeImageBtn.classList.add('hidden');
     statusEl.textContent = '';
     statusEl.className = '';
-    questionCount.textContent = '0 / 1000';
-    answerCount.textContent = '0 / 1000';
+    questionCount.textContent = '0 / 300';
+    answerCount.textContent = '0 / 300';
   }
 
   showBtn.addEventListener('click', openForm);
+  backBtn.addEventListener('click', closeForm);
   cancelBtn.addEventListener('click', closeForm);
 
-  typeSelect.addEventListener('change', () => {
-    const isQna = typeSelect.value === 'qna';
-    answerField.classList.toggle('hidden', !isQna);
-    answerCount.classList.toggle('hidden', !isQna);
+  // Type toggle
+  typeOptions.forEach(btn => {
+    btn.addEventListener('click', () => {
+      typeOptions.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      typeHidden.value = btn.dataset.value;
+      const isQna = btn.dataset.value === 'qna';
+      answerField.classList.toggle('hidden', !isQna);
+      answerCount.classList.toggle('hidden', !isQna);
+    });
   });
 
   questionField.addEventListener('input', () => {
-    questionCount.textContent = `${questionField.value.length} / 1000`;
+    questionCount.textContent = `${questionField.value.length} / 300`;
   });
 
   answerField.addEventListener('input', () => {
-    answerCount.textContent = `${answerField.value.length} / 1000`;
+    answerCount.textContent = `${answerField.value.length} / 300`;
+  });
+
+  // Upload zone
+  uploadZone.addEventListener('click', (e) => {
+    if (e.target !== removeImageBtn && !removeImageBtn.contains(e.target)) {
+      imageInput.click();
+    }
   });
 
   imageInput.addEventListener('change', () => {
     const file = imageInput.files[0];
-    if (!file) {
-      imagePreview.classList.add('hidden');
-      return;
-    }
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       imagePreview.src = e.target.result;
       imagePreview.classList.remove('hidden');
+      uploadPlaceholder.classList.add('hidden');
+      removeImageBtn.classList.remove('hidden');
     };
     reader.readAsDataURL(file);
   });
 
+  removeImageBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    imageInput.value = '';
+    imagePreview.classList.add('hidden');
+    imagePreview.removeAttribute('src');
+    uploadPlaceholder.classList.remove('hidden');
+    removeImageBtn.classList.add('hidden');
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const submitBtn = form.querySelector('.btn-submit');
     submitBtn.disabled = true;
     statusEl.className = '';
     statusEl.textContent = 'Submitting...';
 
     try {
-      const type = typeSelect.value;
+      const type = typeHidden.value;
       const question = questionField.value.trim();
       const answer = type === 'qna' ? answerField.value.trim() : null;
       const imageFile = imageInput.files[0];
@@ -126,7 +165,7 @@ export function initSubmitForm() {
         imagePublicId: imageData.imagePublicId,
         upvotes: 5,
         downvotes: 0,
-        status: 'quarantine', // held for admin approval
+        status: 'quarantine',
         submittedBy: 'anonymous',
         timestamp: serverTimestamp(),
         createdAt: serverTimestamp(),

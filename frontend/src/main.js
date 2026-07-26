@@ -8,6 +8,7 @@ import { initSubmitForm } from './modules/submitForm.js';
 const upBtn = document.getElementById('upvote-btn');
 const downBtn = document.getElementById('downvote-btn');
 const nextBtn = document.getElementById('next-btn');
+const scoreEl = document.getElementById('vote-score');
 
 async function loadAndShowJoke() {
   const joke = await fetchRandomJoke();
@@ -19,27 +20,38 @@ function reflectVoteState(joke) {
   if (!joke) {
     upBtn.disabled = true;
     downBtn.disabled = true;
+    scoreEl.textContent = '0';
     return;
   }
   const existingVote = getVoteDirection(joke.id);
   upBtn.disabled = !!existingVote;
   downBtn.disabled = !!existingVote;
-  upBtn.classList.toggle('voted', existingVote === 'up');
-  downBtn.classList.toggle('voted', existingVote === 'down');
+  upBtn.classList.toggle('voted-up', existingVote === 'up');
+  downBtn.classList.toggle('voted-down', existingVote === 'down');
+
+  // Show live score
+  const score = (joke.upvotes || 0) - (joke.downvotes || 0);
+  scoreEl.textContent = score > 0 ? `+${score}` : String(score);
 }
 
 upBtn.addEventListener('click', async () => {
   const joke = getCurrentJoke();
   if (!joke) return;
   const ok = await castVote(joke.id, 'up');
-  if (ok) reflectVoteState(joke);
+  if (ok) {
+    joke.upvotes = (joke.upvotes || 0) + 1;
+    reflectVoteState(joke);
+  }
 });
 
 downBtn.addEventListener('click', async () => {
   const joke = getCurrentJoke();
   if (!joke) return;
   const ok = await castVote(joke.id, 'down');
-  if (ok) reflectVoteState(joke);
+  if (ok) {
+    joke.downvotes = (joke.downvotes || 0) + 1;
+    reflectVoteState(joke);
+  }
 });
 
 nextBtn.addEventListener('click', async () => {

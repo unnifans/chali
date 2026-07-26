@@ -9,7 +9,6 @@ export async function fetchRandomJoke() {
   const jokesRef = collection(db, 'jokes');
   const r = Math.random();
 
-  // Try the "at or above r" half of the range first
   let q = query(
     jokesRef,
     where('status', '==', 'active'),
@@ -19,7 +18,6 @@ export async function fetchRandomJoke() {
   );
   let snap = await getDocs(q);
 
-  // Wraparound: nothing above r, grab from the start of the range instead
   if (snap.empty) {
     q = query(jokesRef, where('status', '==', 'active'), orderBy('rand'), limit(1));
     snap = await getDocs(q);
@@ -43,13 +41,16 @@ export function renderJoke(joke) {
   }
 
   const imageHtml = joke.imageUrl
-    ? `<img class="joke-image" loading="lazy" src="${toCloudinaryUrl(joke.imageUrl, 400)}" alt="joke illustration" />`
+    ? `<img class="joke-image" loading="lazy" src="${toCloudinaryUrl(joke.imageUrl, 500)}" alt="joke illustration" />`
     : '';
 
+  const badgeHtml = `<span class="joke-badge"></span>`;
+
   if (joke.type === 'single') {
-    root.innerHTML = `${imageHtml}<p class="joke-text">${escapeHtml(joke.question)}</p>`;
+    root.innerHTML = `${badgeHtml}${imageHtml}<p class="joke-text">${escapeHtml(joke.question)}</p>`;
   } else {
     root.innerHTML = `
+      ${badgeHtml}
       ${imageHtml}
       <p class="joke-text">${escapeHtml(joke.question)}</p>
       <button id="reveal-btn" class="btn-accent">Reveal Answer</button>
