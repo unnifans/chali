@@ -1,4 +1,4 @@
-const COOLDOWN_MS = 1000;
+const COOLDOWN_MS = 100;
 let lastFetchTime = 0;
 let cooldownInterval = null;
 
