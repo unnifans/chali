@@ -37,84 +37,74 @@ export async function uploadImageToCloudinary(file) {
 }
 
 export function initSubmitForm() {
+  const feedView = document.getElementById('feed-view');
+  const submitView = document.getElementById('submit-view');
   const showBtn = document.getElementById('show-submit-btn');
-  const backBtn = document.getElementById('back-btn');
+  const backBtn = document.getElementById('submit-back-btn');
   const cancelBtn = document.getElementById('submit-cancel-btn');
-  const jokeCard = document.getElementById('joke-card');
-  const submitPanel = document.getElementById('submit-panel');
-
   const form = document.getElementById('submit-form');
-  const typeHidden = document.getElementById('joke-type');
-  const typeOptions = form.querySelectorAll('.type-option');
+
+  const segmentButtons = document.querySelectorAll('#type-segmented .segment');
+  const typeInput = document.getElementById('joke-type');
   const questionField = document.getElementById('joke-question');
   const answerField = document.getElementById('joke-answer');
-  const answerCount = document.getElementById('answer-count');
   const questionCount = document.getElementById('question-count');
-
+  const answerCount = document.getElementById('answer-count');
   const imageInput = document.getElementById('joke-image');
-  const uploadZone = document.getElementById('upload-zone');
-  const uploadPlaceholder = document.getElementById('upload-placeholder');
   const imagePreview = document.getElementById('joke-image-preview');
-  const removeImageBtn = document.getElementById('remove-image');
+  const dropzoneText = document.querySelector('.dropzone-text');
+  const dropzoneIcon = document.querySelector('.dropzone-icon');
   const statusEl = document.getElementById('submit-status');
 
   function openForm() {
-    jokeCard.classList.add('hidden');
-    submitPanel.classList.remove('hidden');
+    feedView.classList.add('hidden');
+    submitView.classList.remove('hidden');
     questionField.focus();
   }
 
-  function closeForm() {
-    submitPanel.classList.add('hidden');
-    jokeCard.classList.remove('hidden');
-    resetForm();
-  }
-
-  function resetForm() {
+  function resetFormFields() {
     form.reset();
-    typeHidden.value = 'single';
-    typeOptions.forEach(btn => btn.classList.toggle('active', btn.dataset.value === 'single'));
+    typeInput.value = 'single';
+    segmentButtons.forEach((b) => b.classList.toggle('active', b.dataset.type === 'single'));
     answerField.classList.add('hidden');
     answerCount.classList.add('hidden');
     imagePreview.classList.add('hidden');
     imagePreview.removeAttribute('src');
-    uploadPlaceholder.classList.remove('hidden');
-    removeImageBtn.classList.add('hidden');
+    dropzoneText.classList.remove('hidden');
+    dropzoneIcon.classList.remove('hidden');
     statusEl.textContent = '';
     statusEl.className = '';
-    questionCount.textContent = '0 / 300';
-    answerCount.textContent = '0 / 300';
+    questionCount.textContent = '0 / 500';
+    answerCount.textContent = '0 / 500';
+  }
+
+  function closeForm() {
+    resetFormFields();
+    submitView.classList.add('hidden');
+    feedView.classList.remove('hidden');
   }
 
   showBtn.addEventListener('click', openForm);
   backBtn.addEventListener('click', closeForm);
   cancelBtn.addEventListener('click', closeForm);
 
-  // Type toggle
-  typeOptions.forEach(btn => {
+  segmentButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      typeOptions.forEach(b => b.classList.remove('active'));
+      segmentButtons.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      typeHidden.value = btn.dataset.value;
-      const isQna = btn.dataset.value === 'qna';
+      typeInput.value = btn.dataset.type;
+      const isQna = btn.dataset.type === 'qna';
       answerField.classList.toggle('hidden', !isQna);
       answerCount.classList.toggle('hidden', !isQna);
     });
   });
 
   questionField.addEventListener('input', () => {
-    questionCount.textContent = `${questionField.value.length} / 300`;
+    questionCount.textContent = `${questionField.value.length} / 500`;
   });
 
   answerField.addEventListener('input', () => {
-    answerCount.textContent = `${answerField.value.length} / 300`;
-  });
-
-  // Upload zone
-  uploadZone.addEventListener('click', (e) => {
-    if (e.target !== removeImageBtn && !removeImageBtn.contains(e.target)) {
-      imageInput.click();
-    }
+    answerCount.textContent = `${answerField.value.length} / 500`;
   });
 
   imageInput.addEventListener('change', () => {
@@ -124,30 +114,21 @@ export function initSubmitForm() {
     reader.onload = (e) => {
       imagePreview.src = e.target.result;
       imagePreview.classList.remove('hidden');
-      uploadPlaceholder.classList.add('hidden');
-      removeImageBtn.classList.remove('hidden');
+      dropzoneText.classList.add('hidden');
+      dropzoneIcon.classList.add('hidden');
     };
     reader.readAsDataURL(file);
   });
 
-  removeImageBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    imageInput.value = '';
-    imagePreview.classList.add('hidden');
-    imagePreview.removeAttribute('src');
-    uploadPlaceholder.classList.remove('hidden');
-    removeImageBtn.classList.add('hidden');
-  });
-
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const submitBtn = form.querySelector('.btn-submit');
+    const submitBtn = form.querySelector('.btn-submit-chali');
     submitBtn.disabled = true;
     statusEl.className = '';
     statusEl.textContent = 'Submitting...';
 
     try {
-      const type = typeHidden.value;
+      const type = typeInput.value;
       const question = questionField.value.trim();
       const answer = type === 'qna' ? answerField.value.trim() : null;
       const imageFile = imageInput.files[0];
@@ -165,16 +146,15 @@ export function initSubmitForm() {
         imagePublicId: imageData.imagePublicId,
         upvotes: 5,
         downvotes: 0,
-        status: 'quarantine',
+        status: 'quarantine', // held for admin approval
         submittedBy: 'anonymous',
         timestamp: serverTimestamp(),
         createdAt: serverTimestamp(),
-        rand: Math.random(),
       });
 
       statusEl.textContent = 'Thanks! Your joke is pending review. 🎉';
       statusEl.className = 'success';
-      setTimeout(closeForm, 2200);
+      setTimeout(closeForm, 1800);
     } catch (err) {
       statusEl.textContent = err.message || 'Submission failed. Try again.';
       statusEl.className = 'error';

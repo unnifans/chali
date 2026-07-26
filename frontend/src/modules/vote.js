@@ -4,13 +4,15 @@ import { hasVoted, markVoted } from './voteCache.js';
 
 const QUARANTINE_THRESHOLD = 3;
 
+// Returns { upvotes, downvotes, status } on success, or null on failure/dupe.
 export async function castVote(jokeId, direction) {
   if (hasVoted(jokeId)) {
     showToast("You've already voted on this one!");
-    return false;
+    return null;
   }
 
   const jokeRef = doc(db, 'jokes', jokeId);
+  let result = null;
 
   try {
     await runTransaction(db, async (transaction) => {
@@ -23,23 +25,21 @@ export async function castVote(jokeId, direction) {
       const newStatus =
         newUpvotes - newDownvotes < QUARANTINE_THRESHOLD ? 'quarantine' : 'active';
 
-      // Writing explicit values (not increment()) so the client and the
-      // security rule agree on the exact resulting numbers and status -
-      // this is what lets the rule validate the quarantine decision
-      // without needing a Cloud Function.
       transaction.update(jokeRef, {
         upvotes: newUpvotes,
         downvotes: newDownvotes,
         status: newStatus,
       });
+
+      result = { upvotes: newUpvotes, downvotes: newDownvotes, status: newStatus };
     });
 
     markVoted(jokeId, direction); // only cache on confirmed success
-    return true;
+    return result;
   } catch (err) {
     console.error('Vote failed:', err);
     showToast('Something went wrong. Try again.');
-    return false;
+    return null;
   }
 }
 

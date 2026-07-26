@@ -242,7 +242,6 @@ form.addEventListener('submit', async (e) => {
         submittedBy: 'admin',
         timestamp: serverTimestamp(),
         createdAt: serverTimestamp(),
-        rand: Math.random(),
       });
       formMsg.textContent = 'Created.';
     }

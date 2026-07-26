@@ -61,7 +61,6 @@ async function seed() {
       ...joke,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      rand: Math.random(),
     });
     console.log(`Added: ${joke.question.slice(0, 40)}...`);
   }
