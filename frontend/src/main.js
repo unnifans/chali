@@ -82,7 +82,7 @@ async function loadAndShowNextJoke() {
   if (joke) {
     jokesViewedCount++;
     // Preload next meme if we're approaching the next meme break (every 2 jokes)
-    if (jokesViewedCount % 2 === 1) {
+    if (jokesViewedCount % 5 === 1) {
       preloadNextMeme();
     }
   }
