@@ -69,6 +69,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /memes/{memeId} {
+      // READ: public read allowed for memes
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

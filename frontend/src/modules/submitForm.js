@@ -154,7 +154,9 @@ export function initSubmitForm() {
 
       statusEl.textContent = 'Thanks! Your joke is pending review. 🎉';
       statusEl.className = 'success';
-      setTimeout(closeForm, 1800);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (err) {
       statusEl.textContent = err.message || 'Submission failed. Try again.';
       statusEl.className = 'error';

@@ -1,0 +1,2 @@
+# Place your meme image files (GIFs, JPEGs, PNGs, WebPs) in this folder.
+# Running `npm run seed-memes` will upload them to Cloudinary and insert records into Firestore.

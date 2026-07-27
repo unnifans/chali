@@ -73,14 +73,11 @@ export function renderJoke(joke) {
     return;
   }
 
-  const badgeLabel = joke.type === 'qna' ? 'Q&A CHALI' : 'CLASSIC CHALI';
-
   const imageHtml = joke.imageUrl
     ? `<div class="joke-image-wrap">
          <img class="joke-image" loading="lazy" src="${toCloudinaryUrl(joke.imageUrl, 500)}" alt="joke illustration" />
-         <span class="joke-badge">${badgeLabel}</span>
        </div>`
-    : `<span class="joke-badge joke-badge-inline">${badgeLabel}</span>`;
+    : '';
 
   if (joke.type === 'single') {
     root.innerHTML = `${imageHtml}<p class="joke-text">${escapeHtml(joke.question)}</p>`;
