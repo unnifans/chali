@@ -37,12 +37,12 @@ body {
 
 .site-header {
     display: flex;
-    justify-content: center;
+    justify-content: left;
     margin-bottom: 18px;
 }
 
 .logo {
-    width: 220px;
+    width: 130px;
     height: auto;
     display: block;
 
