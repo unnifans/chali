@@ -65,7 +65,7 @@ async function loadInitialState() {
       renderJoke(joke);
       jokesViewedCount++;
       reflectVoteState(joke);
-    }, 1500);
+    }, 300);
   } else {
     showCardControls();
     renderJoke(null);
