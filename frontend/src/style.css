@@ -63,6 +63,32 @@ body {
   cursor: grabbing;
 }
 
+/* Wiggle animation hint for initial card */
+.card-swipe-hint {
+  animation: cardWiggle 1.2s cubic-bezier(0.25, 1, 0.5, 1) 0.3s 1;
+}
+
+@keyframes cardWiggle {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  20% {
+    transform: translate3d(24px, 0, 0) rotate(2.5deg);
+  }
+  40% {
+    transform: translate3d(-18px, 0, 0) rotate(-2deg);
+  }
+  60% {
+    transform: translate3d(10px, 0, 0) rotate(1deg);
+  }
+  80% {
+    transform: translate3d(-4px, 0, 0) rotate(-0.5deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+}
+
 .joke-image-wrap {
   position: relative;
   margin-bottom: 16px;

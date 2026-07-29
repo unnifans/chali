@@ -125,3 +125,17 @@ export function animateCardEntry() {
     cardEl.style.opacity = '1';
   });
 }
+
+/**
+ * Triggers a subtle left-right nudge/wiggle to hint to users that the card is swipable.
+ */
+export function triggerSwipeHint(cardElement) {
+  const target = cardElement || cardEl;
+  if (!target) return;
+  target.classList.remove('card-swipe-hint');
+  void target.offsetWidth; // force reflow
+  target.classList.add('card-swipe-hint');
+  setTimeout(() => {
+    target.classList.remove('card-swipe-hint');
+  }, 1600);
+}

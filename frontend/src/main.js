@@ -9,13 +9,12 @@ import {
   fetchLoadingMemes, renderMemeCard, getOrPreloadMeme, preloadNextMeme,
   DEFAULT_MALAYALAM_LOADING_MSG, FIXED_INITIAL_LOADING_GIF_URL
 } from './modules/meme.js';
-import { initCardSwipe, flyOutAndTriggerNext } from './modules/swipe.js';
+import { initCardSwipe, flyOutAndTriggerNext, triggerSwipeHint } from './modules/swipe.js';
 
 import { triggerEmojiBurst } from './modules/particles.js';
 
 const upBtn = document.getElementById('upvote-btn');
 const downBtn = document.getElementById('downvote-btn');
-const nextBtn = document.getElementById('next-btn');
 const votePill = document.querySelector('.vote-pill');
 const submitBtn = document.getElementById('show-submit-btn');
 const jokeCard = document.querySelector('.joke-card');
@@ -33,13 +32,11 @@ function clearAutoNext() {
 
 function hideCardControls() {
   if (votePill) votePill.classList.add('hidden');
-  if (nextBtn) nextBtn.classList.add('hidden');
   if (submitBtn) submitBtn.classList.add('hidden');
 }
 
 function showCardControls() {
   if (votePill) votePill.classList.remove('hidden');
-  if (nextBtn) nextBtn.classList.remove('hidden');
   if (submitBtn) submitBtn.classList.remove('hidden');
 }
 
@@ -65,7 +62,9 @@ async function loadInitialState() {
       renderJoke(joke);
       jokesViewedCount++;
       reflectVoteState(joke);
-    }, 300);
+      // Trigger card swipe hint wiggle to let users know cards are swipable!
+      triggerSwipeHint(jokeCard);
+    }, 1500);
   } else {
     showCardControls();
     renderJoke(null);
@@ -226,11 +225,6 @@ async function handleVote(clickedDirection) {
 
 upBtn.addEventListener('click', () => handleVote('up'));
 downBtn.addEventListener('click', () => handleVote('down'));
-
-// Button click triggers smooth fly-out card animation
-nextBtn.addEventListener('click', () => {
-  flyOutAndTriggerNext(1);
-});
 
 // Initialize card swipe gesture with fly-out animation
 if (jokeCard) {
