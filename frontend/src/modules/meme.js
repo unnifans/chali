@@ -4,6 +4,7 @@ import { db } from '../firebase-config.js';
 // Edit or replace this Malayalam loading message anytime:
 export const DEFAULT_MALAYALAM_LOADING_MSG = 'ദേ ഇപ്പൊ ശരിയാക്കിത്തരാ.... 😁';
 export const EVERY_5TH_JOKE_BREAK_MSG = 'ദേ ഇപ്പൊ ശരിയാക്കിത്തരാ.... 😁';
+export const FIXED_INITIAL_LOADING_GIF_URL = 'https://res.cloudinary.com/ikrkjuoq/image/upload/v1785171591/malayalam_joke_app/loading_memes/xy0l8rsosbr5zygn0n7y.gif';
 
 let loadingMemes = [];
 let lastMemeId = null;

@@ -7,7 +7,7 @@ import { hasVoted, markVoted, unmarkVoted, getVoteDirection } from './modules/vo
 import { initSubmitForm } from './modules/submitForm.js';
 import {
   fetchLoadingMemes, renderMemeCard, getOrPreloadMeme, preloadNextMeme,
-  DEFAULT_MALAYALAM_LOADING_MSG
+  DEFAULT_MALAYALAM_LOADING_MSG, FIXED_INITIAL_LOADING_GIF_URL
 } from './modules/meme.js';
 import { initCardSwipe, flyOutAndTriggerNext } from './modules/swipe.js';
 
@@ -44,9 +44,9 @@ function showCardControls() {
 }
 
 async function loadInitialState() {
-  // 1. Hide buttons and show initial meme placeholder with Malayalam loading text
+  // 1. Hide controls and immediately render fixed GIF + Malayalam loading text together on frame 1
   hideCardControls();
-  renderMemeCard(null, DEFAULT_MALAYALAM_LOADING_MSG);
+  renderMemeCard({ url: FIXED_INITIAL_LOADING_GIF_URL }, DEFAULT_MALAYALAM_LOADING_MSG);
 
   // 2. Fetch memes and initial joke in parallel
   const [memes, joke] = await Promise.all([
@@ -54,13 +54,8 @@ async function loadInitialState() {
     fetchRandomJoke(),
   ]);
 
-  // Preload the next meme in background for the first meme break
+  // Preload next meme in background for upcoming meme break
   preloadNextMeme();
-
-  const meme = getOrPreloadMeme();
-  if (meme) {
-    renderMemeCard(meme, DEFAULT_MALAYALAM_LOADING_MSG);
-  }
 
   // 3. Automatically transition to initial joke in 3 seconds
   if (joke) {
@@ -71,7 +66,7 @@ async function loadInitialState() {
       jokesViewedCount++;
       reflectVoteState(joke);
     }, 3000);
-  } else if (!meme) {
+  } else {
     showCardControls();
     renderJoke(null);
   }
