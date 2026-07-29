@@ -23,31 +23,37 @@ body {
   background: var(--bg-page);
   color: var(--text-primary);
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  padding: 40px 20px;
+  padding: 56px 20px;
 }
 
 .app-shell {
-  width: 100%;
-  max-width: 480px;
+    width: 100%;
+    max-width: 540px;
 }
 
 .hidden { display: none !important; }
 
 /* ---------- Feed view ---------- */
 
-.feed-label {
-  font-weight: 700;
-  color: var(--accent-rust);
-  font-size: 1.05rem;
-  padding-bottom: 10px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--border-light);
+.site-header {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.logo {
+    width: 220px;
+    height: auto;
+    display: block;
+
+    user-select: none;
+    pointer-events: none;
 }
 
 .card {
   background: var(--card-bg);
   border-radius: 20px;
-  padding: 20px;
+  padding: 24px;
   box-shadow: 0 10px 30px rgba(36, 49, 74, 0.08);
 }
 
