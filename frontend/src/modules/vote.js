@@ -4,13 +4,8 @@ import { hasVoted, markVoted } from './voteCache.js';
 
 const QUARANTINE_THRESHOLD = 3;
 
-// Returns { upvotes, downvotes, status } on success, or null on failure/dupe.
-export async function castVote(jokeId, direction) {
-  if (hasVoted(jokeId)) {
-    showToast("You've already voted on this one!");
-    return null;
-  }
-
+// Returns { upvotes, downvotes, status } on success, or null on failure.
+export async function castVote(jokeId, actionType, directionDetails, options = {}) {
   const jokeRef = doc(db, 'jokes', jokeId);
   let result = null;
 
@@ -20,8 +15,25 @@ export async function castVote(jokeId, direction) {
       if (!snap.exists()) throw new Error('Joke no longer exists');
 
       const data = snap.data();
-      const newUpvotes = direction === 'up' ? data.upvotes + 1 : data.upvotes;
-      const newDownvotes = direction === 'down' ? data.downvotes + 1 : data.downvotes;
+      let newUpvotes = data.upvotes;
+      let newDownvotes = data.downvotes;
+
+      if (actionType === 'new') {
+        if (directionDetails.target === 'up') newUpvotes += 1;
+        if (directionDetails.target === 'down') newDownvotes += 1;
+      } else if (actionType === 'undo') {
+        if (directionDetails.previous === 'up') newUpvotes = Math.max(0, newUpvotes - 1);
+        if (directionDetails.previous === 'down') newDownvotes = Math.max(0, newDownvotes - 1);
+      } else if (actionType === 'switch') {
+        if (directionDetails.target === 'up') {
+          newUpvotes += 1;
+          newDownvotes = Math.max(0, newDownvotes - 1);
+        } else if (directionDetails.target === 'down') {
+          newDownvotes += 1;
+          newUpvotes = Math.max(0, newUpvotes - 1);
+        }
+      }
+
       const newStatus =
         newUpvotes - newDownvotes < QUARANTINE_THRESHOLD ? 'quarantine' : 'active';
 
@@ -34,16 +46,14 @@ export async function castVote(jokeId, direction) {
       result = { upvotes: newUpvotes, downvotes: newDownvotes, status: newStatus };
     });
 
-    markVoted(jokeId, direction); // only cache on confirmed success
     return result;
   } catch (err) {
-    console.error('Vote failed:', err);
-    showToast('Something went wrong. Try again.');
+    console.error('Vote transaction failed:', err);
     return null;
   }
 }
 
-function showToast(msg) {
+export function showToast(msg) {
   const el = document.getElementById('toast');
   if (!el) return;
   el.textContent = msg;

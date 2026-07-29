@@ -2,19 +2,23 @@ import './firebase-config.js';
 import {
   fetchRandomJoke, renderJoke, updateVoteScore, applyVoteResult, getCurrentJoke
 } from './modules/joke.js';
-import { castVote } from './modules/vote.js';
-import { getVoteDirection } from './modules/voteCache.js';
+import { castVote, showToast } from './modules/vote.js';
+import { hasVoted, markVoted, unmarkVoted, getVoteDirection } from './modules/voteCache.js';
 import { initSubmitForm } from './modules/submitForm.js';
 import {
   fetchLoadingMemes, renderMemeCard, getOrPreloadMeme, preloadNextMeme,
   DEFAULT_MALAYALAM_LOADING_MSG
 } from './modules/meme.js';
+import { initCardSwipe, flyOutAndTriggerNext } from './modules/swipe.js';
+
+import { triggerEmojiBurst } from './modules/particles.js';
 
 const upBtn = document.getElementById('upvote-btn');
 const downBtn = document.getElementById('downvote-btn');
 const nextBtn = document.getElementById('next-btn');
 const votePill = document.querySelector('.vote-pill');
 const submitBtn = document.getElementById('show-submit-btn');
+const jokeCard = document.querySelector('.joke-card');
 
 let jokesViewedCount = 0;
 let isShowingMeme = false;
@@ -82,11 +86,22 @@ async function loadAndShowNextJoke() {
   if (joke) {
     jokesViewedCount++;
     // Preload next meme if we're approaching the next meme break (every 2 jokes)
-    if (jokesViewedCount % 5 === 1) {
+    if (jokesViewedCount % 2 === 1) {
       preloadNextMeme();
     }
   }
   reflectVoteState(joke);
+}
+
+function triggerNextCard() {
+  clearAutoNext();
+  if (isShowingMeme) {
+    loadAndShowNextJoke();
+  } else if (jokesViewedCount > 0 && jokesViewedCount % 2 === 0) {
+    showMemeBreak();
+  } else {
+    loadAndShowNextJoke();
+  }
 }
 
 function showMemeBreak() {
@@ -94,11 +109,11 @@ function showMemeBreak() {
   isShowingMeme = true;
   hideCardControls();
   const meme = getOrPreloadMeme();
-  renderMemeCard(meme);
+  renderMemeCard(meme, '');
 
   // Automatically transition to next joke in 3 seconds
   autoNextTimeout = setTimeout(() => {
-    loadAndShowNextJoke();
+    triggerNextCard();
   }, 3000);
 }
 
@@ -116,38 +131,118 @@ function reflectVoteState(joke) {
     return;
   }
   const existingVote = getVoteDirection(joke.id);
-  upBtn.disabled = !!existingVote;
-  downBtn.disabled = !!existingVote;
+  // Keep both buttons ENABLED so users can change or toggle their vote!
+  upBtn.disabled = false;
+  downBtn.disabled = false;
   upBtn.classList.toggle('voted', existingVote === 'up');
   downBtn.classList.toggle('voted', existingVote === 'down');
 }
 
-async function handleVote(direction) {
+/**
+ * Optimistic Voting Handler:
+ * Supports New vote, Undo vote, and Vote Switching with instant 0ms UI response & particle bursts.
+ */
+async function handleVote(clickedDirection) {
   if (isShowingMeme) return;
   const joke = getCurrentJoke();
   if (!joke) return;
-  const result = await castVote(joke.id, direction);
+
+  const existingVote = getVoteDirection(joke.id);
+  let actionType = 'new';
+  let directionDetails = {};
+
+  if (existingVote === clickedDirection) {
+    // User clicked the same button again -> UNDO VOTE
+    actionType = 'undo';
+    directionDetails = { previous: existingVote };
+  } else if (existingVote && existingVote !== clickedDirection) {
+    // User clicked the opposite button -> SWITCH VOTE
+    actionType = 'switch';
+    directionDetails = { previous: existingVote, target: clickedDirection };
+  } else {
+    // NEW VOTE
+    actionType = 'new';
+    directionDetails = { target: clickedDirection };
+  }
+
+  // Preserve previous state for rollback on error
+  const oldUpvotes = joke.upvotes;
+  const oldDownvotes = joke.downvotes;
+  const oldStatus = joke.status;
+
+  let optUpvotes = oldUpvotes;
+  let optDownvotes = oldDownvotes;
+
+  if (actionType === 'new') {
+    if (clickedDirection === 'up') optUpvotes += 1;
+    if (clickedDirection === 'down') optDownvotes += 1;
+  } else if (actionType === 'undo') {
+    if (existingVote === 'up') optUpvotes = Math.max(0, optUpvotes - 1);
+    if (existingVote === 'down') optDownvotes = Math.max(0, optDownvotes - 1);
+  } else if (actionType === 'switch') {
+    if (clickedDirection === 'up') {
+      optUpvotes += 1;
+      optDownvotes = Math.max(0, optDownvotes - 1);
+    } else {
+      optDownvotes += 1;
+      optUpvotes = Math.max(0, optUpvotes - 1);
+    }
+  }
+
+  const optStatus = (optUpvotes - optDownvotes < 3) ? 'quarantine' : 'active';
+
+  // 1. Instantly update local cache & UI state (0ms response)
+  if (actionType === 'new' || actionType === 'switch') {
+    markVoted(joke.id, clickedDirection);
+    const btn = clickedDirection === 'up' ? upBtn : downBtn;
+    triggerEmojiBurst(btn, clickedDirection === 'up' ? '🔥' : '💩');
+  } else {
+    unmarkVoted(joke.id);
+  }
+
+  applyVoteResult(joke.id, optUpvotes, optDownvotes, optStatus);
+  const optJoke = getCurrentJoke();
+  updateVoteScore(optJoke);
+  reflectVoteState(optJoke);
+
+  // 2. Commit transaction asynchronously in background
+  const result = await castVote(joke.id, actionType, directionDetails);
+
   if (result) {
+    // Sync with exact server state
     applyVoteResult(joke.id, result.upvotes, result.downvotes, result.status);
-    const updatedJoke = getCurrentJoke();
-    updateVoteScore(updatedJoke);
-    reflectVoteState(updatedJoke);
+    const syncJoke = getCurrentJoke();
+    updateVoteScore(syncJoke);
+    reflectVoteState(syncJoke);
+  } else {
+    // Rollback on network failure
+    if (existingVote) {
+      markVoted(joke.id, existingVote);
+    } else {
+      unmarkVoted(joke.id);
+    }
+    applyVoteResult(joke.id, oldUpvotes, oldDownvotes, oldStatus);
+    const rollbackJoke = getCurrentJoke();
+    updateVoteScore(rollbackJoke);
+    reflectVoteState(rollbackJoke);
+    showToast("Couldn't save your vote. Please check connection.");
   }
 }
 
 upBtn.addEventListener('click', () => handleVote('up'));
 downBtn.addEventListener('click', () => handleVote('down'));
 
+// Button click triggers smooth fly-out card animation
 nextBtn.addEventListener('click', () => {
-  clearAutoNext();
-  if (isShowingMeme) {
-    loadAndShowNextJoke();
-  } else if (jokesViewedCount > 0 && jokesViewedCount % 3 === 0) {
-    showMemeBreak();
-  } else {
-    loadAndShowNextJoke();
-  }
+  flyOutAndTriggerNext(1);
 });
+
+// Initialize card swipe gesture with fly-out animation
+if (jokeCard) {
+  initCardSwipe(jokeCard, () => {
+    triggerNextCard();
+  });
+}
 
 initSubmitForm();
 loadInitialState();

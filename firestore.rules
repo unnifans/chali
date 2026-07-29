@@ -40,23 +40,24 @@ service cloud.firestore {
                     && request.resource.data.timestamp == request.time
                     );
 
-      // UPDATE: public vote (+1 to exactly one field, plus a correctly
-      // recomputed status) OR admin full access. This replaces the old
-      // Cloud Function trigger — no Blaze plan needed, the quarantine
-      // decision is validated right here as part of the same write.
+      // UPDATE: public vote (upvote/downvote +1, undo -1, or switch vote)
       allow update: if
         (
           resource.data.status == 'active' &&
           isUnchangedExcept(['upvotes', 'downvotes', 'status']) &&
           (
-            (
-              request.resource.data.upvotes == resource.data.upvotes + 1 &&
-              request.resource.data.downvotes == resource.data.downvotes
-            ) ||
-            (
-              request.resource.data.downvotes == resource.data.downvotes + 1 &&
-              request.resource.data.upvotes == resource.data.upvotes
-            )
+            // 1. Upvote (+1 up, same down)
+            (request.resource.data.upvotes == resource.data.upvotes + 1 && request.resource.data.downvotes == resource.data.downvotes) ||
+            // 2. Downvote (+1 down, same up)
+            (request.resource.data.downvotes == resource.data.downvotes + 1 && request.resource.data.upvotes == resource.data.upvotes) ||
+            // 3. Undo upvote (-1 up, same down)
+            (request.resource.data.upvotes == resource.data.upvotes - 1 && request.resource.data.downvotes == resource.data.downvotes) ||
+            // 4. Undo downvote (-1 down, same up)
+            (request.resource.data.downvotes == resource.data.downvotes - 1 && request.resource.data.upvotes == resource.data.upvotes) ||
+            // 5. Switch from downvote to upvote (+1 up, -1 down)
+            (request.resource.data.upvotes == resource.data.upvotes + 1 && request.resource.data.downvotes == resource.data.downvotes - 1) ||
+            // 6. Switch from upvote to downvote (-1 up, +1 down)
+            (request.resource.data.upvotes == resource.data.upvotes - 1 && request.resource.data.downvotes == resource.data.downvotes + 1)
           ) &&
           request.resource.data.status == (
             (request.resource.data.upvotes - request.resource.data.downvotes) < 3

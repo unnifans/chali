@@ -51,6 +51,18 @@ body {
   box-shadow: 0 10px 30px rgba(36, 49, 74, 0.08);
 }
 
+.joke-card {
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform, opacity;
+  cursor: grab;
+}
+
+.joke-card.swiping {
+  cursor: grabbing;
+}
+
 .joke-image-wrap {
   position: relative;
   margin-bottom: 16px;
@@ -146,39 +158,96 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btn-accent:hover:not(:disabled) { background: var(--accent-orange-dark); }
 
-/* vote pill: [up] [+score] [down] */
+/* vote pill: fun reaction buttons */
 .vote-pill {
   display: inline-flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   background: var(--pill-bg);
+  border: 1px solid var(--border-light);
   border-radius: 999px;
-  padding: 8px 20px;
+  padding: 6px 14px;
   margin-bottom: 20px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-.vote-arrow {
-  background: none;
-  color: var(--text-muted);
-  font-size: 1rem;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
+.vote-btn {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 0;
+  gap: 6px;
+  background: white;
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.vote-arrow:hover:not(:disabled) { background: rgba(36, 49, 74, 0.06); }
-.vote-arrow.voted { color: var(--accent-green); font-weight: 700; }
+.vote-btn .vote-emoji {
+  font-size: 1.15rem;
+  transition: transform 0.2s ease;
+}
+
+.vote-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.vote-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Upvote voted state (Mass Fire Glow) */
+.vote-btn-up.voted {
+  background: #FFF5EC;
+  border-color: var(--accent-orange);
+  color: var(--accent-rust);
+  box-shadow: 0 2px 10px rgba(239, 162, 61, 0.25);
+}
+.vote-btn-up.voted .vote-emoji {
+  transform: scale(1.25) rotate(12deg);
+}
+
+/* Downvote voted state (Chali Wobble State) */
+.vote-btn-down.voted {
+  background: #F4F3F0;
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.vote-btn-down.voted .vote-emoji {
+  transform: scale(1.2) rotate(-10deg);
+}
 
 .vote-score {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 1.05rem;
   color: var(--text-primary);
-  min-width: 42px;
+  min-width: 36px;
   text-align: center;
+}
+
+/* Floating Emoji Particle Burst */
+.emoji-particle {
+  position: fixed;
+  pointer-events: none;
+  font-size: 1.4rem;
+  z-index: 9999;
+  animation: emojiFloatFade 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes emojiFloatFade {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(var(--random-scale, 1));
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift-x, 0px), var(--drift-y, -50px), 0) scale(calc(var(--random-scale, 1) * 1.3));
+  }
 }
 
 .next-btn {

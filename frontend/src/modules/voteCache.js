@@ -26,3 +26,13 @@ export function markVoted(jokeId, direction) {
 export function getVoteDirection(jokeId) {
   return readCache()[jokeId] || null;
 }
+
+export function unmarkVoted(jokeId) {
+  const cache = readCache();
+  delete cache[jokeId];
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+  } catch {
+    // ignore
+  }
+}
