@@ -250,6 +250,35 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   }
 }
 
+/* Full Screen Emoji Shower */
+.full-screen-emoji {
+  position: fixed;
+  pointer-events: none;
+  z-index: 10000;
+  user-select: none;
+  font-size: 2rem;
+  will-change: transform, opacity;
+  animation: fullEmojiShower 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes fullEmojiShower {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(calc(var(--scale, 1) * 0.5)) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+    transform: translate3d(calc(var(--sway-x, 0px) * 0.3), -140px, 0) scale(var(--scale, 1)) rotate(var(--rot, 15deg));
+  }
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--sway-x, 0px), -750px, 0) scale(calc(var(--scale, 1) * 1.2)) rotate(calc(var(--rot, 15deg) * 2));
+  }
+}
+
 .next-btn {
   position: relative;
   overflow: hidden;

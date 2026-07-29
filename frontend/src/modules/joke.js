@@ -85,13 +85,30 @@ export function renderJoke(joke) {
     root.innerHTML = `
       ${imageHtml}
       <p class="joke-text">${escapeHtml(joke.question)}</p>
-      <button id="reveal-btn" class="btn-accent">Reveal Answer</button>
+      <button id="reveal-btn" class="btn-accent" disabled>Reveal Answer</button>
       <p class="joke-answer hidden" id="joke-answer">${escapeHtml(joke.answer)}</p>
     `;
-    document.getElementById('reveal-btn').addEventListener('click', () => {
+    const revealBtn = document.getElementById('reveal-btn');
+    revealBtn.addEventListener('click', () => {
       document.getElementById('joke-answer').classList.remove('hidden');
-      document.getElementById('reveal-btn').classList.add('hidden');
+      revealBtn.classList.add('hidden');
     });
+
+    let remaining = 3;
+    const timer = setInterval(() => {
+      remaining--;
+      if (!document.body.contains(revealBtn)) {
+        clearInterval(timer);
+        return;
+      }
+      if (remaining > 0) {
+        revealBtn.textContent = `Reveal Answer `;
+      } else {
+        clearInterval(timer);
+        revealBtn.disabled = false;
+        revealBtn.textContent = 'Reveal Answer';
+      }
+    }, 1000);
   }
 
   updateVoteScore(joke);

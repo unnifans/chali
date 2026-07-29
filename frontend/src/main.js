@@ -195,7 +195,7 @@ async function handleVote(clickedDirection) {
   if (actionType === 'new' || actionType === 'switch') {
     markVoted(joke.id, clickedDirection);
     const btn = clickedDirection === 'up' ? upBtn : downBtn;
-    triggerEmojiBurst(btn, clickedDirection === 'up' ? '🔥' : '💩');
+    triggerEmojiBurst(btn, clickedDirection === 'up' ? '🤣' : '😡');
   } else {
     unmarkVoted(joke.id);
   }

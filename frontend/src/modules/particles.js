@@ -1,38 +1,51 @@
 /**
- * Particle Emoji Burst Helper
- * Creates floating emoji particle bursts on button clicks for fun visual feedback.
+ * Particle & Full-Screen Emoji Shower Helper
+ * Triggers full screen emoji showers and mobile haptic vibration feedback.
  */
 
-export function triggerEmojiBurst(targetElement, emojiSymbol = '🔥') {
-  if (!targetElement) return;
+export function triggerEmojiBurst(targetElement, emojiSymbol = '🤣') {
+  triggerFullEmojiShower(emojiSymbol);
+}
 
-  const rect = targetElement.getBoundingClientRect();
-  const count = 4; // Number of floating particles
+export function triggerFullEmojiShower(emojiSymbol = '🤣') {
+  // Mobile haptic vibration feedback if supported
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate([40, 30, 40]);
+    } catch {
+      // Ignore unsupported vibration permission restrictions
+    }
+  }
+
+  const count = 28; // Number of floating screen emojis
+  const screenWidth = window.innerWidth || document.documentElement.clientWidth;
 
   for (let i = 0; i < count; i++) {
     const particle = document.createElement('span');
-    particle.className = 'emoji-particle';
+    particle.className = 'full-screen-emoji';
     particle.textContent = emojiSymbol;
 
-    // Center starting coordinates around button
-    const startX = rect.left + rect.width / 2 + (Math.random() * 24 - 12);
-    const startY = rect.top + rect.height / 2 - 10;
-    const driftX = (Math.random() * 50 - 25); // Random left/right drift
-    const driftY = -(40 + Math.random() * 30); // Upward float
+    // Distribute randomly across screen width
+    const startX = Math.random() * screenWidth;
+    const startY = (window.innerHeight || 800) + Math.random() * 60;
+    const swayX = (Math.random() * 160 - 80);
+    const rotation = (Math.random() * 60 - 30);
+    const scale = (0.9 + Math.random() * 0.9).toFixed(2);
+    const delay = (Math.random() * 0.3).toFixed(2);
 
     particle.style.left = `${startX}px`;
     particle.style.top = `${startY}px`;
-    particle.style.setProperty('--drift-x', `${driftX}px`);
-    particle.style.setProperty('--drift-y', `${driftY}px`);
-    particle.style.setProperty('--random-scale', (0.8 + Math.random() * 0.5).toString());
+    particle.style.setProperty('--sway-x', `${swayX}px`);
+    particle.style.setProperty('--rot', `${rotation}deg`);
+    particle.style.setProperty('--scale', scale);
+    particle.style.animationDelay = `${delay}s`;
 
     document.body.appendChild(particle);
 
-    // Clean up DOM after animation completes
     setTimeout(() => {
       if (particle.parentNode) {
         particle.parentNode.removeChild(particle);
       }
-    }, 700);
+    }, 1600);
   }
 }
