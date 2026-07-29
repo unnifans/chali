@@ -57,7 +57,7 @@ async function loadInitialState() {
   // Preload next meme in background for upcoming meme break
   preloadNextMeme();
 
-  // 3. Automatically transition to initial joke in 3 seconds
+  // 3. Automatically transition to initial joke in 1.5 seconds
   if (joke) {
     autoNextTimeout = setTimeout(() => {
       showCardControls();
@@ -65,7 +65,7 @@ async function loadInitialState() {
       renderJoke(joke);
       jokesViewedCount++;
       reflectVoteState(joke);
-    }, 3000);
+    }, 1500);
   } else {
     showCardControls();
     renderJoke(null);
