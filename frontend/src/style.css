@@ -1,20 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Noto+Sans+Malayalam:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@500;600;700;800&family=Manjari:wght@400;700&family=Noto+Sans+Malayalam:wght@400;500;600;700&family=Special+Elite&display=swap');
 
 :root {
-  /* Kerala kasavu + temple-mural inspired palette */
-  --bg-page: #E8EDE1;
-  --card-bg: #FFF9EE;
-  --text-primary: #241F14;
-  --text-muted: #8C7E5C;
-  --accent-orange: #C9A227;       /* kasavu gold */
-  --accent-orange-dark: #A9841A;
-  --accent-rust: #A8391F;         /* mural vermillion */
-  --accent-green: #2F6B4F;        /* temple green */
-  --accent-green-dark: #234F3A;
-  --pill-bg: #F3EAD2;
-  --border-light: #E7D9AE;
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-malayalam: 'Noto Sans Malayalam', 'Segoe UI', system-ui, sans-serif;
+  /* Bus-stand joke-booklet palette: aged newsprint + two-colour mimeograph ink */
+  --bg-page: #EDE1C2;
+  --card-bg: #F7F0DC;
+  --text-primary: #221B12;
+  --text-muted: #7C7057;
+  --accent-orange: #B98A2E;       /* ochre stamp ink */
+  --accent-orange-dark: #8F6A20;
+  --accent-rust: #A32F22;         /* rubber-stamp red */
+  --accent-green: #1F4E79;        /* mimeograph blue */
+  --accent-green-dark: #163A57;
+  --pill-bg: #E2D3A6;
+  --border-light: #C9B583;
+  --font-display: 'Special Elite', 'Courier New', monospace;      /* stamped / typed chrome */
+  --font-malayalam: 'Manjari', 'Noto Sans Malayalam', system-ui, sans-serif; /* body copy */
+  --font-headline: 'Baloo Chettan 2', 'Noto Sans Malayalam', sans-serif;     /* poster-style headline */
 }
 
 * { box-sizing: border-box; }
@@ -27,16 +28,45 @@ body {
   justify-content: center;
   background-color: var(--bg-page);
   background-image:
-    radial-gradient(circle, rgba(168, 57, 31, 0.12) 1px, transparent 1.4px);
-  background-size: 24px 24px;
+    radial-gradient(circle at 18% 20%, rgba(163, 47, 34, 0.05) 0, rgba(163, 47, 34, 0) 90px),
+    radial-gradient(circle at 82% 74%, rgba(31, 78, 121, 0.05) 0, rgba(31, 78, 121, 0) 110px),
+    repeating-linear-gradient(115deg, rgba(34, 26, 18, 0.025) 0 2px, transparent 2px 5px);
   color: var(--text-primary);
   font-family: var(--font-malayalam);
   padding: 56px 20px;
+  position: relative;
+}
+
+/* Two faint coffee-ring stains on the paper, off to the sides */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+body::before {
+  top: 8%;
+  right: 7%;
+  width: 130px;
+  height: 130px;
+  border: 6px solid rgba(93, 60, 20, 0.10);
+  box-shadow: 0 0 0 3px rgba(93, 60, 20, 0.05) inset;
+}
+body::after {
+  bottom: 10%;
+  left: 6%;
+  width: 90px;
+  height: 90px;
+  border: 5px solid rgba(93, 60, 20, 0.08);
 }
 
 .app-shell {
     width: 100%;
     max-width: 540px;
+    position: relative;
+    z-index: 1;
 }
 
 .hidden { display: none !important; }
@@ -54,14 +84,14 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--card-bg);
-  border-radius: 16px;
-  padding: 10px 18px;
-  box-shadow: 0 6px 18px rgba(36, 31, 20, 0.1);
-  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 10px;
+  padding: 8px 16px;
+  box-shadow: 3px 3px 0 var(--border-light);
+  border: 2px solid var(--text-primary);
 }
 
 .logo {
-    width: 118px;
+    width: 108px;
     height: auto;
     display: block;
 
@@ -72,21 +102,25 @@ body {
 .card {
   position: relative;
   background: var(--card-bg);
-  border-radius: 20px;
-  padding: 28px 24px 24px;
-  box-shadow: 0 16px 36px rgba(36, 31, 20, 0.12);
-  overflow: hidden;
+  border: 2px solid var(--text-primary);
+  border-radius: 10px;
+  padding: 34px 24px 24px;
+  box-shadow: 6px 6px 0 var(--border-light), 6px 6px 0 2px rgba(34, 26, 18, 0.12);
+  overflow: visible;
 }
 
-/* Kasavu gold pinstripe — the signature detail */
+/* A strip of masking tape pinning the page down — the signature detail */
 .card::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 7px;
-  background: linear-gradient(90deg, #B58B1E 0%, #E7C158 24%, #B58B1E 50%, #E7C158 76%, #B58B1E 100%);
+  top: -14px;
+  left: 50%;
+  width: 110px;
+  height: 32px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: repeating-linear-gradient(45deg, rgba(163, 47, 34, 0.55) 0 6px, rgba(163, 47, 34, 0.32) 6px 12px);
+  opacity: 0.9;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.18);
 }
 
 .joke-card {
@@ -136,67 +170,91 @@ body {
   width: 100%;
   max-height: 260px;
   object-fit: cover;
-  border-radius: 14px;
+  border-radius: 6px;
   display: block;
+  border: 2px solid var(--text-primary);
 }
 
 .joke-badge {
   position: absolute;
   top: 12px;
   left: 12px;
-  background: var(--accent-orange);
-  color: #2A1F08;
-  font-size: 0.65rem;
+  background: var(--card-bg);
+  color: var(--accent-rust);
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   padding: 5px 10px;
   border-radius: 999px;
+  border: 2px solid var(--accent-rust);
 }
 
 .joke-badge-inline {
   position: static;
   display: inline-block;
-  margin-bottom: 14px;
-  background: var(--pill-bg);
+  margin-bottom: 16px;
+  background: transparent;
   color: var(--accent-rust);
+  transform: rotate(-3deg);
 }
 
 .joke-text {
-  font-family: var(--font-malayalam);
-  font-size: 1.32rem;
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
   font-weight: 600;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--text-primary);
-  margin: 0 0 20px 0;
+  margin: 0 0 22px 0;
 }
 
 .joke-answer {
   font-family: var(--font-malayalam);
-  font-size: 1.12rem;
-  line-height: 1.55;
+  font-size: 1.05rem;
+  line-height: 1.6;
   margin-top: 4px;
   margin-bottom: 20px;
   color: var(--accent-green);
-  font-weight: 600;
+  font-weight: 700;
+  padding-top: 14px;
+  border-top: 2px dashed var(--border-light);
+}
+
+.joke-answer::before {
+  content: "Utharam";
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
 }
 
 .empty-state {
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
   text-align: center;
   color: var(--text-muted);
-  padding: 20px 0;
+  padding: 24px 0;
+  animation: gentlePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes gentlePulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
 .meme-badge {
   background: var(--accent-rust);
   color: white !important;
+  border-color: var(--accent-rust);
 }
 
 .meme-loading-text {
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1rem;
   text-align: center;
   color: var(--text-primary);
   margin-top: 12px;
@@ -206,39 +264,45 @@ button {
   font-family: inherit;
   font-size: 1rem;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
 }
 
-button:active { transform: scale(0.98); }
-button:disabled { opacity: 0.55; cursor: not-allowed; }
+button:active { transform: translate(1px, 1px); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-accent {
   background: var(--accent-orange);
-  color: #2A1F08;
+  color: var(--text-primary);
   font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   padding: 12px 20px;
-  font-weight: 700;
-  border-radius: 12px;
+  font-weight: 400;
+  border: 2px solid var(--text-primary);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 var(--text-primary);
   margin-bottom: 12px;
 }
 
 .btn-accent:hover:not(:disabled) { background: var(--accent-orange-dark); }
+.btn-accent:active:not(:disabled) { box-shadow: 1px 1px 0 var(--text-primary); }
 
-/* vote pill: fun reaction buttons */
+/* vote pill: styled like a torn ticket stub with a perforated middle */
 .vote-pill {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
-  gap: 8px;
-  background: var(--pill-bg);
-  border: 1px solid var(--border-light);
-  border-radius: 999px;
-  padding: 6px;
+  gap: 0;
+  background: var(--card-bg);
+  border: 2px solid var(--text-primary);
+  border-radius: 10px;
+  padding: 0;
   margin: 0 0 22px 0;
   width: 100%;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 3px 3px 0 var(--border-light);
+  overflow: hidden;
 }
 
 .vote-btn {
@@ -248,60 +312,61 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   justify-content: center;
   gap: 6px;
   background: var(--card-bg);
-  border: 1px solid var(--border-light);
+  border: none;
   color: var(--text-primary);
   font-family: var(--font-display);
-  font-size: 0.88rem;
-  font-weight: 700;
-  padding: 10px 14px;
-  border-radius: 999px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 400;
+  padding: 14px 12px;
+  border-radius: 0;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: background 0.15s ease;
 }
 
+.vote-btn-up { border-right: 2px dashed var(--border-light); }
+.vote-btn-down { border-left: 2px dashed var(--border-light); }
+
 .vote-btn .vote-emoji {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   transition: transform 0.2s ease;
 }
 
 .vote-btn:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  background: var(--pill-bg);
 }
 
 .vote-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.95);
+  transform: translateY(1px);
 }
 
-/* Upvote voted state (gold glow) */
+/* Upvote voted state — stamped "approved" ink block */
 .vote-btn-up.voted {
-  background: #FBF0D2;
-  border-color: var(--accent-orange);
-  color: var(--accent-rust);
-  box-shadow: 0 2px 10px rgba(201, 162, 39, 0.35);
+  background: var(--accent-rust);
+  color: var(--card-bg);
 }
 .vote-btn-up.voted .vote-emoji {
-  transform: scale(1.25) rotate(12deg);
+  transform: scale(1.2) rotate(-8deg);
 }
 
-/* Downvote voted state (Chali Wobble State) */
+/* Downvote voted state — stamped in plain ink */
 .vote-btn-down.voted {
-  background: #EDEAE0;
-  border-color: var(--text-muted);
-  color: var(--text-muted);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--text-primary);
+  color: var(--card-bg);
 }
 .vote-btn-down.voted .vote-emoji {
-  transform: scale(1.2) rotate(-10deg);
+  transform: scale(1.15) rotate(6deg);
 }
 
 .vote-score {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.05rem;
+  font-weight: 400;
+  font-size: 1rem;
   color: var(--text-primary);
-  min-width: 36px;
+  min-width: 44px;
   text-align: center;
+  padding: 14px 4px;
 }
 
 /* Floating Emoji Particle Burst */
@@ -310,7 +375,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   pointer-events: none;
   font-size: 1.4rem;
   z-index: 9999;
-  animation: emojiFloatFade 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: emojiFloatFade 0.65s ease-out forwards;
 }
 
 @keyframes emojiFloatFade {
@@ -332,7 +397,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   user-select: none;
   font-size: 2rem;
   will-change: transform, opacity;
-  animation: fullEmojiShower 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: fullEmojiShower 1.5s ease-out forwards;
 }
 
 @keyframes fullEmojiShower {
@@ -358,15 +423,20 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   overflow: hidden;
   width: 100%;
   background: var(--accent-orange);
-  color: #2A1F08;
+  color: var(--text-primary);
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+  font-size: 0.95rem;
   padding: 16px;
-  border-radius: 14px;
+  border: 2px solid var(--text-primary);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 var(--text-primary);
 }
 
 .next-btn:hover:not(:disabled) { background: var(--accent-orange-dark); }
+.next-btn:active:not(:disabled) { box-shadow: 1px 1px 0 var(--text-primary); }
 .next-btn .arrow { margin-left: 6px; }
 
 /* Center the submit toggle button */
@@ -380,7 +450,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   margin: 18px auto 0 auto;
   color: var(--text-muted);
   font-family: var(--font-display);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   padding: 6px;
 }
 
@@ -392,13 +462,18 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   height: 22px;
   border-radius: 50%;
   background: var(--pill-bg);
+  border: 1px solid var(--border-light);
 }
 
-.submit-toggle-btn u { color: var(--accent-rust); }
+.submit-toggle-btn u {
+  color: var(--accent-rust);
+  text-decoration-style: wavy;
+  text-underline-offset: 3px;
+}
 
 /* ---------- Submit view ---------- */
 
-.submit-card { padding: 28px 24px 24px; }
+.submit-card { padding: 34px 24px 24px; }
 
 .submit-header {
   display: flex;
@@ -414,35 +489,40 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   padding: 0;
   width: 32px;
   height: 32px;
+  border-radius: 50%;
 }
+
+.back-btn:hover { background: var(--pill-bg); }
 
 .submit-header h2 {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
   color: var(--accent-rust);
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.3rem;
+  font-weight: 700;
 }
 
 .notice-banner {
-  background: #F3E6C4;
-  color: #6B4712;
+  background: var(--pill-bg);
+  color: var(--text-primary);
+  font-family: var(--font-malayalam);
   font-size: 0.85rem;
   font-weight: 600;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: 4px;
   margin-bottom: 20px;
   display: flex;
   gap: 10px;
   align-items: flex-start;
   line-height: 1.4;
+  border-left: 3px solid var(--accent-rust);
 }
 
 .notice-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent-orange);
+  background: var(--accent-rust);
   margin-top: 5px;
   flex-shrink: 0;
 }
@@ -451,7 +531,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   display: block;
   font-family: var(--font-display);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent-rust);
@@ -461,7 +541,8 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .segmented {
   display: flex;
   background: var(--pill-bg);
-  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
   padding: 4px;
   gap: 4px;
 }
@@ -469,109 +550,142 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .segment {
   flex: 1;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: none;
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: 0.75rem;
 }
 
 .segment.active {
   background: var(--card-bg);
   color: var(--accent-rust);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--text-primary);
+  box-shadow: 2px 2px 0 var(--border-light);
 }
 
+/* Textareas styled like a ruled exercise-book page, red margin line and all */
 #submit-form textarea {
   width: 100%;
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  padding: 14px;
+  border: none;
+  border-bottom: 2px solid var(--text-primary);
+  border-radius: 0;
+  padding: 12px 4px 12px 16px;
   font-family: var(--font-malayalam);
   font-size: 0.95rem;
   resize: vertical;
-  min-height: 100px;
-  background: var(--card-bg);
+  min-height: 104px;
+  background: var(--card-bg) linear-gradient(var(--border-light) 1px, transparent 1px) 0 30px / 100% 29px;
   color: var(--text-primary);
+  box-shadow: inset 3px 0 0 var(--accent-rust);
 }
 
 #submit-form textarea:focus {
   outline: none;
   border-color: var(--accent-orange);
-  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+  box-shadow: inset 3px 0 0 var(--accent-rust), 0 2px 0 var(--accent-orange);
 }
 
 .char-count {
   display: block;
-  font-size: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
   color: var(--text-muted);
   text-align: right;
   margin-top: 4px;
 }
 
+/* Dropzone with scrapbook photo-corner mounts */
 .dropzone {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 2px dashed #D3BE87;
-  border-radius: 12px;
+  border: 2px dashed var(--border-light);
+  border-radius: 8px;
   padding: 28px 16px;
   cursor: pointer;
   text-align: center;
   color: var(--text-muted);
   margin-top: 4px;
+  background: var(--card-bg);
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.dropzone:hover { border-color: var(--accent-orange); background: rgba(201, 162, 39, 0.06); }
+.dropzone::before,
+.dropzone::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid var(--accent-rust);
+  border-left: 2px solid var(--accent-rust);
+  opacity: 0.7;
+}
+.dropzone::before { top: 6px; left: 6px; }
+.dropzone::after { bottom: 6px; right: 6px; transform: rotate(180deg); }
+
+.dropzone:hover { border-color: var(--accent-orange); background: var(--pill-bg); }
 
 .dropzone-icon { font-size: 1.6rem; }
-.dropzone-text { font-size: 0.85rem; font-weight: 600; }
+.dropzone-text { font-family: var(--font-display); font-size: 0.78rem; }
 .hidden-input { display: none; }
 
 #joke-image-preview {
   max-width: 100%;
   max-height: 160px;
-  border-radius: 10px;
+  border-radius: 6px;
   object-fit: cover;
+  border: 2px solid var(--text-primary);
 }
 
 .btn-submit-chali {
   width: 100%;
   background: var(--accent-green);
-  color: white;
+  color: var(--card-bg);
   font-family: var(--font-display);
-  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 400;
   padding: 16px;
-  border-radius: 14px;
+  border: 2px solid var(--text-primary);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 var(--text-primary);
   margin-top: 22px;
-  font-size: 1rem;
+  font-size: 0.92rem;
 }
 
 .btn-submit-chali:hover:not(:disabled) { background: var(--accent-green-dark); }
+.btn-submit-chali:active:not(:disabled) { box-shadow: 1px 1px 0 var(--text-primary); }
 
 .btn-cancel {
   width: 100%;
   background: var(--pill-bg);
   color: var(--text-primary);
   font-family: var(--font-display);
-  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 400;
   padding: 14px;
-  border-radius: 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
   margin-top: 10px;
 }
 
 #submit-status {
-  font-size: 0.9rem;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
   min-height: 1.2em;
   margin-top: 10px;
 }
 
-#submit-status.success { color: var(--accent-green); font-weight: 600; }
-#submit-status.error { color: #b8473c; font-weight: 600; }
+#submit-status.success { color: var(--accent-green); font-weight: 400; }
+#submit-status.error { color: var(--accent-rust); font-weight: 400; }
 
 .toast {
   position: fixed;
@@ -579,9 +693,13 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--text-primary);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
+  color: var(--card-bg);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  padding: 10px 18px;
+  border-radius: 6px;
+  border: 2px solid var(--accent-rust);
   opacity: 0;
   transition: opacity 0.2s ease, transform 0.2s ease;
   z-index: 10;
@@ -594,7 +712,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 }
 
 
-/* GitHub contribute button - fixed to bottom */
+/* GitHub contribute button - styled like a stamped, perforated postal tab */
 .github-contribute {
   position: fixed;
   bottom: 24px;
@@ -603,27 +721,26 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1F2B22;
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
-  border: 1px solid rgba(201, 162, 39, 0.45);
+  background: var(--text-primary);
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  border: 2px dashed rgba(247, 240, 220, 0.55);
   text-decoration: none;
-  transition: all 0.25s ease;
-  box-shadow: 0 6px 18px rgba(36, 31, 20, 0.28);
+  transition: all 0.2s ease;
+  box-shadow: 3px 3px 0 var(--border-light);
   z-index: 100;
 }
 
 .github-contribute:hover {
-  background: #17201A;
   transform: translateX(-50%) translateY(-3px);
-  box-shadow: 0 10px 22px rgba(36, 31, 20, 0.32);
+  box-shadow: 5px 5px 0 var(--border-light);
 }
 
 .github-icon {
-  width: 27px;
-  height: 27px;
-  color: white;
+  width: 26px;
+  height: 26px;
+  color: var(--card-bg);
 }
 
 .external-arrow {
@@ -637,7 +754,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   justify-content: center;
   font-size: 0.72rem;
   font-weight: 900;
-  color: #2A1F08;
+  color: var(--text-primary);
   line-height: 1;
   background: var(--accent-orange);
   border-radius: 50%;
