@@ -132,13 +132,6 @@ async function loadAndShowNextJoke() {
       preloadNextMeme();
     }
   }
-  if (jokeCard) {
-  initCardSwipe(
-    jokeCard,
-    () => triggerNextCard(),   // swipe right
-    () => showPreviousJoke()   // swipe left
-  );
-}
   reflectVoteState(joke);
 }
 
@@ -288,10 +281,13 @@ nextBtn.addEventListener('click', () => {
 });
 
 // Initialize card swipe gesture with fly-out animation
+// Initialize card swipe gesture with fly-out animation
 if (jokeCard) {
-  initCardSwipe(jokeCard, () => {
-    triggerNextCard();
-  });
+  initCardSwipe(
+    jokeCard,
+    () => triggerNextCard(),   // swipe right triggerNextCard
+    () => showPreviousJoke()   // swipe left triggerNextCard
+  );
 }
 
 initSubmitForm();
@@ -299,15 +295,17 @@ loadInitialState();
 
 // Handle keyboard navigation (left and right arrow keys)
 document.addEventListener('keydown', (event) => {
-  // Only trigger if not typing in an input/textarea
   const activeElement = document.activeElement;
   if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
-    return; // Don't interfere with form inputs
+    return;
   }
-  
-  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-    event.preventDefault(); // Prevent default scrolling behavior
-    flyOutAndTriggerNext(1); // Use your existing fly-out animation
+
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    flyOutAndTriggerNext(1);
+  } else if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    flyOutAndTriggerPrev(-1);
   }
 });
 

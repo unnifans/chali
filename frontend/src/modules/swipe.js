@@ -54,6 +54,7 @@ function handlePointerMove(e) {
   currentDeltaY = e.clientY - startY;
 
   // Rotation angle proportional to horizontal drag distance
+  // Negative rotation for left swipe, positive for right swipe
   const rotateDeg = currentDeltaX * 0.06;
   const opacity = Math.max(0.6, 1 - Math.abs(currentDeltaX) / 500);
 
@@ -67,11 +68,11 @@ function handlePointerUp() {
   cardEl.classList.remove('swiping');
 
   if (Math.abs(currentDeltaX) > SWIPE_THRESHOLD) {
-    // Dragged right -> next joke. Dragged left -> previous joke.
-    if (currentDeltaX > 0) {
-      flyOutAndTriggerNext(1);
+    // REVERSED: Left swipe (negative) -> Next joke, Right swipe (positive) -> Previous joke
+    if (currentDeltaX < 0) {
+      flyOutAndTriggerNext(-1); // Left swipe -> Next
     } else {
-      flyOutAndTriggerPrev(-1);
+      flyOutAndTriggerPrev(1);  // Right swipe -> Previous
     }
   } else {
     // Spring back to center smoothly
@@ -89,17 +90,20 @@ function flyOutCard(direction, callback) {
   if (!cardEl || isAnimating) return;
   isAnimating = true;
 
+  // Reset currentDeltaY to 0 when triggered programmatically (keyboard/scroll)
   const flyX = direction * (window.innerWidth || 500);
   const rotate = direction * 25;
+  const deltaY = currentDeltaY || 0;
 
   cardEl.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease-out';
-  cardEl.style.transform = `translate3d(${flyX}px, ${currentDeltaY || 0}px, 0) rotate(${rotate}deg)`;
+  cardEl.style.transform = `translate3d(${flyX}px, ${deltaY}px, 0) rotate(${rotate}deg)`;
   cardEl.style.opacity = '0';
 
   setTimeout(() => {
     // Reset card transform position instantly offscreen/hidden
     cardEl.style.transition = 'none';
     cardEl.style.transform = 'translate3d(0, 15px, 0) scale(0.96)';
+    currentDeltaY = 0;
 
     if (typeof callback === 'function') {
       callback();
@@ -112,22 +116,29 @@ function flyOutCard(direction, callback) {
       cardEl.style.opacity = '1';
       setTimeout(() => {
         isAnimating = false;
+        cardEl.style.transform = 'translate3d(0, 0, 0) scale(1)';
       }, 300);
     });
   }, 220);
 }
 
 /**
- * Animates the card flying off to the right and triggers the "next" callback.
+ * Animates the card flying off to the left and triggers the "next" callback.
  */
-export function flyOutAndTriggerNext(direction = 1) {
+export function flyOutAndTriggerNext(direction = -1) {
+  // Reset delta values before flying out
+  currentDeltaX = 0;
+  currentDeltaY = 0;
   flyOutCard(direction, onSwipeNextCallback);
 }
 
 /**
- * Animates the card flying off to the left and triggers the "previous" callback.
+ * Animates the card flying off to the right and triggers the "previous" callback.
  */
-export function flyOutAndTriggerPrev(direction = -1) {
+export function flyOutAndTriggerPrev(direction = 1) {
+  // Reset delta values before flying out
+  currentDeltaX = 0;
+  currentDeltaY = 0;
   flyOutCard(direction, onSwipePrevCallback);
 }
 
