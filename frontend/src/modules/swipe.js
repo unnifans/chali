@@ -9,14 +9,16 @@ let startY = 0;
 let currentDeltaX = 0;
 let currentDeltaY = 0;
 let cardEl = null;
-let onSwipeCallback = null;
+let onSwipeNextCallback = null;
+let onSwipePrevCallback = null;
 let isAnimating = false;
 
 const SWIPE_THRESHOLD = 90; // Pixels required to trigger a swipe
 
-export function initCardSwipe(cardElement, onSwipe) {
+export function initCardSwipe(cardElement, onSwipeNext, onSwipePrev) {
   cardEl = cardElement;
-  onSwipeCallback = onSwipe;
+  onSwipeNextCallback = onSwipeNext;
+  onSwipePrevCallback = onSwipePrev;
 
   if (!cardEl) return;
 
@@ -65,8 +67,12 @@ function handlePointerUp() {
   cardEl.classList.remove('swiping');
 
   if (Math.abs(currentDeltaX) > SWIPE_THRESHOLD) {
-    const direction = currentDeltaX > 0 ? 1 : -1;
-    flyOutAndTriggerNext(direction);
+    // Dragged right -> next joke. Dragged left -> previous joke.
+    if (currentDeltaX > 0) {
+      flyOutAndTriggerNext(1);
+    } else {
+      flyOutAndTriggerPrev(-1);
+    }
   } else {
     // Spring back to center smoothly
     cardEl.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease';
@@ -76,9 +82,10 @@ function handlePointerUp() {
 }
 
 /**
- * Animates the card flying off screen in specified direction (+1 right, -1 left).
+ * Shared fly-out/fly-in animation. direction: +1 flies right, -1 flies left.
+ * callback fires once the old card is offscreen, before the new one animates in.
  */
-export function flyOutAndTriggerNext(direction = 1) {
+function flyOutCard(direction, callback) {
   if (!cardEl || isAnimating) return;
   isAnimating = true;
 
@@ -93,9 +100,9 @@ export function flyOutAndTriggerNext(direction = 1) {
     // Reset card transform position instantly offscreen/hidden
     cardEl.style.transition = 'none';
     cardEl.style.transform = 'translate3d(0, 15px, 0) scale(0.96)';
-    
-    if (typeof onSwipeCallback === 'function') {
-      onSwipeCallback();
+
+    if (typeof callback === 'function') {
+      callback();
     }
 
     // Smoothly animate new card entry
@@ -108,6 +115,20 @@ export function flyOutAndTriggerNext(direction = 1) {
       }, 300);
     });
   }, 220);
+}
+
+/**
+ * Animates the card flying off to the right and triggers the "next" callback.
+ */
+export function flyOutAndTriggerNext(direction = 1) {
+  flyOutCard(direction, onSwipeNextCallback);
+}
+
+/**
+ * Animates the card flying off to the left and triggers the "previous" callback.
+ */
+export function flyOutAndTriggerPrev(direction = -1) {
+  flyOutCard(direction, onSwipePrevCallback);
 }
 
 /**

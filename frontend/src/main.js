@@ -9,8 +9,7 @@ import {
   fetchLoadingMemes, renderMemeCard, getOrPreloadMeme, preloadNextMeme,
   DEFAULT_MALAYALAM_LOADING_MSG, FIXED_INITIAL_LOADING_GIF_URL
 } from './modules/meme.js';
-import { initCardSwipe, flyOutAndTriggerNext, triggerSwipeHint } from './modules/swipe.js';
-
+import { initCardSwipe, flyOutAndTriggerNext, flyOutAndTriggerPrev, triggerSwipeHint } from './modules/swipe.js';
 import { triggerEmojiBurst } from './modules/particles.js';
 
 const upBtn = document.getElementById('upvote-btn');
@@ -19,6 +18,51 @@ const nextBtn = document.getElementById('next-btn');
 const votePill = document.querySelector('.vote-pill');
 const submitBtn = document.getElementById('show-submit-btn');
 const jokeCard = document.querySelector('.joke-card');
+
+// Add joke history for going back
+let jokeHistory = [];
+let currentHistoryIndex = -1;
+const MAX_HISTORY = 50; // Limit history to prevent memory issues
+
+function pushJokeToHistory(joke) {
+  if (!joke) return;
+  // If the user had gone back and is now moving forward again, drop the stale forward stack
+  jokeHistory = jokeHistory.slice(0, currentHistoryIndex + 1);
+  jokeHistory.push(joke);
+  if (jokeHistory.length > MAX_HISTORY) {
+    jokeHistory.shift();
+  }
+  currentHistoryIndex = jokeHistory.length - 1;
+}
+
+function showPreviousJoke() {
+  clearAutoNext();
+
+  if (jokeHistory.length === 0) return;
+
+  if (isShowingMeme) {
+    // We're on a meme break — "previous" just returns to the last real joke,
+    // which is already sitting at currentHistoryIndex (memes aren't pushed to history).
+    const joke = jokeHistory[currentHistoryIndex];
+    showCardControls();
+    isShowingMeme = false;
+    renderJoke(joke);
+    reflectVoteState(joke);
+    return;
+  }
+
+  if (currentHistoryIndex <= 0) {
+    showToast("That's the earliest joke");
+    return;
+  }
+
+  currentHistoryIndex--;
+  const joke = jokeHistory[currentHistoryIndex];
+  showCardControls();
+  isShowingMeme = false;
+  renderJoke(joke);
+  reflectVoteState(joke);
+}
 
 let jokesViewedCount = 0;
 let isShowingMeme = false;
@@ -64,6 +108,7 @@ async function loadInitialState() {
       isShowingMeme = false;
       renderJoke(joke);
       jokesViewedCount++;
+      pushJokeToHistory(joke);
       reflectVoteState(joke);
       // Trigger card swipe hint wiggle to let users know cards are swipable!
       triggerSwipeHint(jokeCard);
@@ -82,11 +127,18 @@ async function loadAndShowNextJoke() {
   renderJoke(joke);
   if (joke) {
     jokesViewedCount++;
-    // Preload next meme if we're approaching the next meme break (every 2 jokes)
+    pushJokeToHistory(joke);
     if (jokesViewedCount % 2 === 1) {
       preloadNextMeme();
     }
   }
+  if (jokeCard) {
+  initCardSwipe(
+    jokeCard,
+    () => triggerNextCard(),   // swipe right
+    () => showPreviousJoke()   // swipe left
+  );
+}
   reflectVoteState(joke);
 }
 
@@ -245,3 +297,95 @@ if (jokeCard) {
 initSubmitForm();
 loadInitialState();
 
+// Handle keyboard navigation (left and right arrow keys)
+document.addEventListener('keydown', (event) => {
+  // Only trigger if not typing in an input/textarea
+  const activeElement = document.activeElement;
+  if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+    return; // Don't interfere with form inputs
+  }
+  
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault(); // Prevent default scrolling behavior
+    flyOutAndTriggerNext(1); // Use your existing fly-out animation
+  }
+});
+
+let scrollTimeout = null;
+let isScrolling = false;
+
+document.addEventListener('wheel', (event) => {
+  const activeElement = document.activeElement;
+  if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+    return;
+  }
+
+  // Only hijack the scroll when it happens over the joke card itself.
+  // Anywhere else on the page should scroll normally.
+  const target = event.target;
+  if (!target || !target.closest('.joke-card')) {
+    return;
+  }
+  if (target.closest('.submit-form') || target.closest('.modal')) {
+    return;
+  }
+  if (event.deltaY === 0) return;
+
+  event.preventDefault();
+
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = null;
+  }
+
+  if (isScrolling) return;
+  isScrolling = true;
+
+  if (event.deltaY > 0) {
+    flyOutAndTriggerNext(1);   // scroll down -> next
+  } else {
+    flyOutAndTriggerPrev(-1);  // scroll up -> previous
+  }
+
+  setTimeout(() => {
+    isScrolling = false;
+  }, 500);
+}, { passive: false });
+
+// Optional: Handle upward scroll to go to previous joke (if you maintain history)
+// You can expand this later if you want
+document.addEventListener('wheel', (event) => {
+  if (event.deltaY < 0) {
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      return;
+    }
+    // For now, we'll just ignore upward scroll
+    // You could implement a "previous joke" feature later
+  }
+}, { passive: false });
+
+// Show keyboard hint briefly when user first loads the page
+function showKeyboardHint() {
+  const hint = document.createElement('div');
+  hint.className = 'keyboard-hint';
+  hint.textContent = '← → Arrow keys or Scroll to navigate jokes';
+  document.body.appendChild(hint);
+  
+  // Show hint
+  setTimeout(() => {
+    hint.classList.add('show');
+  }, 500);
+  
+  // Hide after 3 seconds
+  setTimeout(() => {
+    hint.classList.remove('show');
+    setTimeout(() => {
+      hint.remove();
+    }, 300);
+  }, 3500);
+}
+
+// Call this after initial joke loads
+// Add inside your loadInitialState function after joke renders:
+// showKeyboardHint();
