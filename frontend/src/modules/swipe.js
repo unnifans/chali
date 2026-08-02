@@ -15,6 +15,9 @@ let isAnimating = false;
 
 const SWIPE_THRESHOLD = 90; // Pixels required to trigger a swipe
 
+// Detect if we're on mobile (touch device)
+const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
 export function initCardSwipe(cardElement, onSwipeNext, onSwipePrev) {
   cardEl = cardElement;
   onSwipeNextCallback = onSwipeNext;
@@ -54,7 +57,6 @@ function handlePointerMove(e) {
   currentDeltaY = e.clientY - startY;
 
   // Rotation angle proportional to horizontal drag distance
-  // Negative rotation for left swipe, positive for right swipe
   const rotateDeg = currentDeltaX * 0.06;
   const opacity = Math.max(0.6, 1 - Math.abs(currentDeltaX) / 500);
 
@@ -68,11 +70,22 @@ function handlePointerUp() {
   cardEl.classList.remove('swiping');
 
   if (Math.abs(currentDeltaX) > SWIPE_THRESHOLD) {
-    // REVERSED: Left swipe (negative) -> Next joke, Right swipe (positive) -> Previous joke
-    if (currentDeltaX < 0) {
-      flyOutAndTriggerNext(-1); // Left swipe -> Next
+    // REVERSED FOR MOBILE: Left swipe -> Next, Right swipe -> Previous
+    // BUT on some mobile apps, this is inverted, so we check if we're on mobile
+    if (isMobile) {
+      // Mobile: Left swipe -> Next, Right swipe -> Previous (reversed from desktop)
+      if (currentDeltaX < 0) {
+        flyOutAndTriggerNext(-1); // Left swipe -> Next
+      } else {
+        flyOutAndTriggerPrev(1);  // Right swipe -> Previous
+      }
     } else {
-      flyOutAndTriggerPrev(1);  // Right swipe -> Previous
+      // Desktop: Left swipe -> Previous, Right swipe -> Next (standard)
+      if (currentDeltaX > 0) {
+        flyOutAndTriggerNext(1);  // Right swipe -> Next
+      } else {
+        flyOutAndTriggerPrev(-1); // Left swipe -> Previous
+      }
     }
   } else {
     // Spring back to center smoothly
@@ -90,7 +103,6 @@ function flyOutCard(direction, callback) {
   if (!cardEl || isAnimating) return;
   isAnimating = true;
 
-  // Reset currentDeltaY to 0 when triggered programmatically (keyboard/scroll)
   const flyX = direction * (window.innerWidth || 500);
   const rotate = direction * 25;
   const deltaY = currentDeltaY || 0;
@@ -123,22 +135,36 @@ function flyOutCard(direction, callback) {
 }
 
 /**
- * Animates the card flying off to the left and triggers the "next" callback.
+ * Animates the card flying off and triggers the "next" callback.
+ * Direction depends on platform.
  */
-export function flyOutAndTriggerNext(direction = -1) {
+export function flyOutAndTriggerNext(direction = null) {
   // Reset delta values before flying out
   currentDeltaX = 0;
   currentDeltaY = 0;
+  
+  // If direction not specified, use platform default
+  if (direction === null) {
+    direction = isMobile ? -1 : 1; // Mobile: fly left, Desktop: fly right
+  }
+  
   flyOutCard(direction, onSwipeNextCallback);
 }
 
 /**
- * Animates the card flying off to the right and triggers the "previous" callback.
+ * Animates the card flying off and triggers the "previous" callback.
+ * Direction depends on platform.
  */
-export function flyOutAndTriggerPrev(direction = 1) {
+export function flyOutAndTriggerPrev(direction = null) {
   // Reset delta values before flying out
   currentDeltaX = 0;
   currentDeltaY = 0;
+  
+  // If direction not specified, use platform default
+  if (direction === null) {
+    direction = isMobile ? 1 : -1; // Mobile: fly right, Desktop: fly left
+  }
+  
   flyOutCard(direction, onSwipePrevCallback);
 }
 
