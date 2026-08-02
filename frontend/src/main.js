@@ -15,6 +15,7 @@ import { triggerEmojiBurst } from './modules/particles.js';
 
 const upBtn = document.getElementById('upvote-btn');
 const downBtn = document.getElementById('downvote-btn');
+const nextBtn = document.getElementById('next-btn');
 const votePill = document.querySelector('.vote-pill');
 const submitBtn = document.getElementById('show-submit-btn');
 const jokeCard = document.querySelector('.joke-card');
@@ -33,11 +34,13 @@ function clearAutoNext() {
 function hideCardControls() {
   if (votePill) votePill.classList.add('hidden');
   if (submitBtn) submitBtn.classList.add('hidden');
+    if (nextBtn) nextBtn.classList.add('hidden');
 }
 
 function showCardControls() {
   if (votePill) votePill.classList.remove('hidden');
   if (submitBtn) submitBtn.classList.remove('hidden');
+    if (nextBtn) nextBtn.classList.remove('hidden');
 }
 
 async function loadInitialState() {
@@ -225,6 +228,12 @@ async function handleVote(clickedDirection) {
 
 upBtn.addEventListener('click', () => handleVote('up'));
 downBtn.addEventListener('click', () => handleVote('down'));
+
+
+// Button click triggers smooth fly-out card animation
+nextBtn.addEventListener('click', () => {
+  flyOutAndTriggerNext(1);
+});
 
 // Initialize card swipe gesture with fly-out animation
 if (jokeCard) {
