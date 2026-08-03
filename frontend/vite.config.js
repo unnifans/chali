@@ -17,9 +17,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Your App Name',
-        short_name: 'App',
-        description: 'Your app description',
+        name: 'chali',
+        short_name: 'chali',
+        description: 'Have fun reading malayalam jokes',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
