@@ -4,6 +4,7 @@
  */
 
 let isDragging = false;
+let isTouchDevice = false;
 let startX = 0;
 let startY = 0;
 let currentDeltaX = 0;
@@ -15,8 +16,10 @@ let isAnimating = false;
 
 const SWIPE_THRESHOLD = 90; // Pixels required to trigger a swipe
 
-// Detect if we're on mobile (touch device)
-const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+// More reliable platform detection
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const isTouchOnlyDevice = isMobile || (hasTouch && window.innerWidth < 1024);
 
 export function initCardSwipe(cardElement, onSwipeNext, onSwipePrev) {
   cardEl = cardElement;
@@ -28,19 +31,88 @@ export function initCardSwipe(cardElement, onSwipeNext, onSwipePrev) {
   // Prevent default image drag behaviors
   cardEl.addEventListener('dragstart', (e) => e.preventDefault());
 
-  // Pointer events (handles both touch & mouse seamlessly)
-  cardEl.addEventListener('pointerdown', handlePointerDown);
-  window.addEventListener('pointermove', handlePointerMove);
-  window.addEventListener('pointerup', handlePointerUp);
-  window.addEventListener('pointercancel', handlePointerUp);
+  // Separate touch and mouse events for better control
+  cardEl.addEventListener('touchstart', handleTouchStart, { passive: true });
+  cardEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+  cardEl.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+  // Mouse events for desktop
+  cardEl.addEventListener('mousedown', handleMouseDown);
+  window.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('mouseup', handleMouseUp);
 }
 
-function handlePointerDown(e) {
-  // Ignore clicks on buttons or form fields inside the card
+function handleTouchStart(e) {
+  if (e.target.closest('button, input, textarea, a, label')) return;
+  if (isAnimating) return;
+
+  const touch = e.touches[0];
+  if (!touch) return;
+
+  isDragging = true;
+  isTouchDevice = true;
+  startX = touch.clientX;
+  startY = touch.clientY;
+  currentDeltaX = 0;
+  currentDeltaY = 0;
+
+  cardEl.style.transition = 'none';
+  cardEl.classList.add('swiping');
+}
+
+function handleTouchMove(e) {
+  if (!isDragging || !isTouchDevice || !cardEl) return;
+  e.preventDefault();
+
+  const touch = e.touches[0];
+  if (!touch) return;
+
+  currentDeltaX = touch.clientX - startX;
+  currentDeltaY = touch.clientY - startY;
+
+  const rotateDeg = currentDeltaX * 0.06;
+  const opacity = Math.max(0.6, 1 - Math.abs(currentDeltaX) / 500);
+
+  cardEl.style.transform = `translate3d(${currentDeltaX}px, ${currentDeltaY * 0.2}px, 0) rotate(${rotateDeg}deg)`;
+  cardEl.style.opacity = opacity.toString();
+}
+
+function handleTouchEnd() {
+  if (!isDragging || !isTouchDevice || !cardEl) {
+    isDragging = false;
+    isTouchDevice = false;
+    return;
+  }
+
+  isDragging = false;
+  isTouchDevice = false;
+  cardEl.classList.remove('swiping');
+
+  if (Math.abs(currentDeltaX) > SWIPE_THRESHOLD) {
+    // On mobile: Left swipe -> Next, Right swipe -> Previous
+    if (currentDeltaX < 0) {
+      flyOutAndTriggerNext(-1); // Left swipe -> Next
+    } else {
+      flyOutAndTriggerPrev(1);  // Right swipe -> Previous
+    }
+  } else {
+    // Spring back to center smoothly
+    cardEl.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease';
+    cardEl.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+    cardEl.style.opacity = '1';
+    currentDeltaX = 0;
+    currentDeltaY = 0;
+  }
+}
+
+function handleMouseDown(e) {
+  // Skip if it's actually a touch event disguised as mouse
+  if (e.pointerType === 'touch') return;
   if (e.target.closest('button, input, textarea, a, label')) return;
   if (isAnimating) return;
 
   isDragging = true;
+  isTouchDevice = false;
   startX = e.clientX;
   startY = e.clientY;
   currentDeltaX = 0;
@@ -50,13 +122,12 @@ function handlePointerDown(e) {
   cardEl.classList.add('swiping');
 }
 
-function handlePointerMove(e) {
-  if (!isDragging || !cardEl) return;
+function handleMouseMove(e) {
+  if (!isDragging || isTouchDevice || !cardEl) return;
 
   currentDeltaX = e.clientX - startX;
   currentDeltaY = e.clientY - startY;
 
-  // Rotation angle proportional to horizontal drag distance
   const rotateDeg = currentDeltaX * 0.06;
   const opacity = Math.max(0.6, 1 - Math.abs(currentDeltaX) / 500);
 
@@ -64,34 +135,29 @@ function handlePointerMove(e) {
   cardEl.style.opacity = opacity.toString();
 }
 
-function handlePointerUp() {
-  if (!isDragging || !cardEl) return;
+function handleMouseUp() {
+  if (!isDragging || isTouchDevice || !cardEl) {
+    isDragging = false;
+    return;
+  }
+
   isDragging = false;
   cardEl.classList.remove('swiping');
 
   if (Math.abs(currentDeltaX) > SWIPE_THRESHOLD) {
-    // REVERSED FOR MOBILE: Left swipe -> Next, Right swipe -> Previous
-    // BUT on some mobile apps, this is inverted, so we check if we're on mobile
-    if (isMobile) {
-      // Mobile: Left swipe -> Next, Right swipe -> Previous (reversed from desktop)
-      if (currentDeltaX < 0) {
-        flyOutAndTriggerNext(-1); // Left swipe -> Next
-      } else {
-        flyOutAndTriggerPrev(1);  // Right swipe -> Previous
-      }
+    // Left swipe -> Next, Right swipe -> Previous (same convention as touch)
+    if (currentDeltaX < 0) {
+      flyOutAndTriggerNext(-1); // Left swipe -> Next
     } else {
-      // Desktop: Left swipe -> Previous, Right swipe -> Next (standard)
-      if (currentDeltaX > 0) {
-        flyOutAndTriggerNext(1);  // Right swipe -> Next
-      } else {
-        flyOutAndTriggerPrev(-1); // Left swipe -> Previous
-      }
+      flyOutAndTriggerPrev(1);  // Right swipe -> Previous
     }
   } else {
     // Spring back to center smoothly
     cardEl.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease';
     cardEl.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
     cardEl.style.opacity = '1';
+    currentDeltaX = 0;
+    currentDeltaY = 0;
   }
 }
 
@@ -115,6 +181,7 @@ function flyOutCard(direction, callback) {
     // Reset card transform position instantly offscreen/hidden
     cardEl.style.transition = 'none';
     cardEl.style.transform = 'translate3d(0, 15px, 0) scale(0.96)';
+    currentDeltaX = 0;
     currentDeltaY = 0;
 
     if (typeof callback === 'function') {
@@ -136,35 +203,21 @@ function flyOutCard(direction, callback) {
 
 /**
  * Animates the card flying off and triggers the "next" callback.
- * Direction depends on platform.
  */
-export function flyOutAndTriggerNext(direction = null) {
+export function flyOutAndTriggerNext(direction = 1) {
   // Reset delta values before flying out
   currentDeltaX = 0;
   currentDeltaY = 0;
-  
-  // If direction not specified, use platform default
-  if (direction === null) {
-    direction = isMobile ? -1 : 1; // Mobile: fly left, Desktop: fly right
-  }
-  
   flyOutCard(direction, onSwipeNextCallback);
 }
 
 /**
  * Animates the card flying off and triggers the "previous" callback.
- * Direction depends on platform.
  */
-export function flyOutAndTriggerPrev(direction = null) {
+export function flyOutAndTriggerPrev(direction = -1) {
   // Reset delta values before flying out
   currentDeltaX = 0;
   currentDeltaY = 0;
-  
-  // If direction not specified, use platform default
-  if (direction === null) {
-    direction = isMobile ? 1 : -1; // Mobile: fly right, Desktop: fly left
-  }
-  
   flyOutCard(direction, onSwipePrevCallback);
 }
 

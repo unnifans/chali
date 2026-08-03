@@ -127,8 +127,8 @@ async function loadAndShowNextJoke() {
   renderJoke(joke);
   if (joke) {
     jokesViewedCount++;
-    pushJokeToHistory(joke);
-    if (jokesViewedCount % 2 === 1) {
+    pushJokeToHistory(joke)
+    if (jokesViewedCount % 2 == 0) {
       preloadNextMeme();
     }
   }
