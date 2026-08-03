@@ -387,3 +387,28 @@ function showKeyboardHint() {
 // Call this after initial joke loads
 // Add inside your loadInitialState function after joke renders:
 // showKeyboardHint();
+
+// Add this to your main.js file
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent Chrome 67 and earlier from automatically showing the prompt
+  e.preventDefault();
+  // Stash the event so it can be triggered later
+  deferredPrompt = e;
+  
+  // Show your custom install button (if you want)
+  // You can add a button to your UI and call deferredPrompt.prompt()
+  console.log('App can be installed!');
+});
+
+window.addEventListener('appinstalled', () => {
+  // Log the installation
+  console.log('App was installed successfully!');
+  // You can send analytics or show a thank you message
+});
+
+// Optional: Check if app is installed
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  console.log('App is running in standalone mode');
+}

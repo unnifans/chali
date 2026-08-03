@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline - The Malayalam Joke App</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .offline-container {
+      max-width: 400px;
+      text-align: center;
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .offline-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .btn-retry {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .btn-retry:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">📶</div>
+    <h1>You're Offline</h1>
+    <p>Looks like you've lost your internet connection. Don't worry, you can still enjoy previously loaded jokes!</p>
+    <button class="btn-retry" onclick="location.reload()">Retry Connection</button>
+  </div>
+</body>
+</html>
