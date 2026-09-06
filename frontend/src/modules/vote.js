@@ -1,54 +1,52 @@
-import { doc, runTransaction } from 'firebase/firestore';
+import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase-config.js';
-import { hasVoted, markVoted } from './voteCache.js';
 
 const QUARANTINE_THRESHOLD = 3;
 
-// Returns { upvotes, downvotes, status } on success, or null on failure.
+// Read-free vote writes: `increment()` applies a delta server-side WITHOUT a
+// read in front of it, so each vote costs 1 write instead of 1 read + 1 write.
+// The status field is intentionally left untouched by the client — the
+// onVoteUpdate Cloud Function reconciles quarantine/active based on the true
+// totals, so concurrent votes can never be rejected by the security rules.
+
+function voteDelta(actionType, directionDetails) {
+  const delta = { upvotes: 0, downvotes: 0 };
+  if (actionType === 'new') {
+    if (directionDetails.target === 'up') delta.upvotes = 1;
+    else delta.downvotes = 1;
+  } else if (actionType === 'undo') {
+    if (directionDetails.previous === 'up') delta.upvotes = -1;
+    else delta.downvotes = -1;
+  } else if (actionType === 'switch') {
+    if (directionDetails.target === 'up') {
+      delta.upvotes = 1;
+      delta.downvotes = -1;
+    } else {
+      delta.downvotes = 1;
+      delta.upvotes = -1;
+    }
+  }
+  return delta;
+}
+
+// Returns { upvotes, downvotes, status } as seen optimistically by this client
+// (based on the counts it last fetched), or null on failure.
 export async function castVote(jokeId, actionType, directionDetails, options = {}) {
-  const jokeRef = doc(db, 'jokes', jokeId);
-  let result = null;
+  const { currentUpvotes = 0, currentDownvotes = 0 } = options;
+  const delta = voteDelta(actionType, directionDetails);
+
+  const upvotes = currentUpvotes + delta.upvotes;
+  const downvotes = currentDownvotes + delta.downvotes;
+  const status = upvotes - downvotes < QUARANTINE_THRESHOLD ? 'quarantine' : 'active';
 
   try {
-    await runTransaction(db, async (transaction) => {
-      const snap = await transaction.get(jokeRef);
-      if (!snap.exists()) throw new Error('Joke no longer exists');
-
-      const data = snap.data();
-      let newUpvotes = data.upvotes;
-      let newDownvotes = data.downvotes;
-
-      if (actionType === 'new') {
-        if (directionDetails.target === 'up') newUpvotes += 1;
-        if (directionDetails.target === 'down') newDownvotes += 1;
-      } else if (actionType === 'undo') {
-        if (directionDetails.previous === 'up') newUpvotes = Math.max(0, newUpvotes - 1);
-        if (directionDetails.previous === 'down') newDownvotes = Math.max(0, newDownvotes - 1);
-      } else if (actionType === 'switch') {
-        if (directionDetails.target === 'up') {
-          newUpvotes += 1;
-          newDownvotes = Math.max(0, newDownvotes - 1);
-        } else if (directionDetails.target === 'down') {
-          newDownvotes += 1;
-          newUpvotes = Math.max(0, newUpvotes - 1);
-        }
-      }
-
-      const newStatus =
-        newUpvotes - newDownvotes < QUARANTINE_THRESHOLD ? 'quarantine' : 'active';
-
-      transaction.update(jokeRef, {
-        upvotes: newUpvotes,
-        downvotes: newDownvotes,
-        status: newStatus,
-      });
-
-      result = { upvotes: newUpvotes, downvotes: newDownvotes, status: newStatus };
+    await updateDoc(doc(db, 'jokes', jokeId), {
+      upvotes: increment(delta.upvotes),
+      downvotes: increment(delta.downvotes),
     });
-
-    return result;
+    return { upvotes, downvotes, status };
   } catch (err) {
-    console.error('Vote transaction failed:', err);
+    console.error('Vote update failed:', err);
     return null;
   }
 }

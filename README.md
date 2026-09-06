@@ -88,6 +88,12 @@ npm run deploy
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
+Read efficiency (critical at viral scale)
+
+The public page no longer pulls the whole active joke pool. Firestore auto-generated document IDs are already random, so the app walks the pool in document-ID order with `where('status','==','active').orderBy(documentId()).startAfter(cursor).limit(1)` — exactly **one Firestore read per joke**. Memes are cached in localStorage for 24h and votes use read-free `increment()` writes.
+
+No migration or composite index is needed for the joke walk (ordering by document ID is served by the automatic single-field index on `status`); the rules/index deploy above just keeps them in sync with the repo. If the walk query ever fails, the app transparently falls back to the old whole-pool fetch.
+
 - Deploy frontend to Cloudflare Pages (Git-connected recommended)
   - Cloudflare Pages build settings: Framework preset **Vite**, build command `npm run build`, output directory `frontend/dist`, root `frontend`.
   - Add the same environment variables in the Cloudflare Pages dashboard.

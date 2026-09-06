@@ -247,8 +247,11 @@ async function handleVote(clickedDirection) {
   updateVoteScore(optJoke);
   reflectVoteState(optJoke);
 
-  // 2. Commit transaction asynchronously in background
-  const result = await castVote(joke.id, actionType, directionDetails);
+  // 2. Commit the vote asynchronously in background (read-free increment write)
+  const result = await castVote(joke.id, actionType, directionDetails, {
+    currentUpvotes: oldUpvotes,
+    currentDownvotes: oldDownvotes,
+  });
 
   if (result) {
     // Sync with exact server state

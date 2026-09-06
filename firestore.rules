@@ -59,9 +59,15 @@ service cloud.firestore {
             // 6. Switch from upvote to downvote (-1 up, +1 down)
             (request.resource.data.upvotes == resource.data.upvotes - 1 && request.resource.data.downvotes == resource.data.downvotes + 1)
           ) &&
-          request.resource.data.status == (
-            (request.resource.data.upvotes - request.resource.data.downvotes) < 3
-              ? 'quarantine' : 'active'
+          (
+            // Status may stay untouched (client votes don't write it — the
+            // onVoteUpdate Cloud Function reconciles quarantine/active) or
+            // match the score-derived value.
+            request.resource.data.status == resource.data.status ||
+            request.resource.data.status == (
+              (request.resource.data.upvotes - request.resource.data.downvotes) < 3
+                ? 'quarantine' : 'active'
+            )
           )
         ) ||
         isAdmin();

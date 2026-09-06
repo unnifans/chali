@@ -9,14 +9,49 @@ export const FIXED_INITIAL_LOADING_GIF_URL = 'https://res.cloudinary.com/ikrkjuo
 let loadingMemes = [];
 let lastMemeId = null;
 
+// Memes rarely change, so cache the list locally for 24h. This turns
+// "M reads per page load" into "M reads per day per user" — an important
+// saving at viral scale.
+const MEME_CACHE_KEY = 'malayalamJokeApp_loadingMemes_v1';
+const MEME_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+function readMemeCache() {
+  try {
+    const raw = localStorage.getItem(MEME_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.memes) || Date.now() - parsed.fetchedAt > MEME_CACHE_TTL) {
+      return null;
+    }
+    return parsed.memes;
+  } catch {
+    return null;
+  }
+}
+
+function writeMemeCache(memes) {
+  try {
+    localStorage.setItem(MEME_CACHE_KEY, JSON.stringify({ memes, fetchedAt: Date.now() }));
+  } catch {
+    // storage unavailable — cache is a nice-to-have
+  }
+}
+
 /**
- * Fetches memes tagged with "loading" from Firestore.
+ * Fetches memes tagged with "loading" from Firestore, hitting the network at
+ * most once per MEME_CACHE_TTL per user thanks to the localStorage cache.
  */
 export async function fetchLoadingMemes() {
+  const cached = readMemeCache();
+  if (cached) {
+    loadingMemes = cached;
+    return loadingMemes;
+  }
   try {
     const q = query(collection(db, 'memes'), where('tag', '==', 'loading'));
     const snap = await getDocs(q);
     loadingMemes = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    writeMemeCache(loadingMemes);
     console.log(`Loaded ${loadingMemes.length} memes from Firestore.`);
   } catch (err) {
     console.error('Error fetching loading memes from Firestore:', err);
