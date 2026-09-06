@@ -313,6 +313,12 @@ let scrollTimeout = null;
 let isScrolling = false;
 
 document.addEventListener('wheel', (event) => {
+  // PC web view (mouse + hover): wheel should scroll the page normally to
+  // reveal content below the fold, never flip between jokes.
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    return;
+  }
+
   const activeElement = document.activeElement;
   if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
     return;
@@ -329,9 +335,22 @@ document.addEventListener('wheel', (event) => {
   }
   if (event.deltaY === 0) return;
 
-  // When a tall Q&A card overflows the viewport, let the page scroll natively
-  // so the full content stays readable instead of flipping to another joke.
+  // 1. Card still taller than the viewport (fallback): let the page scroll.
   if (isCardOverflowingViewport()) return;
+
+  // 2. Long content that can scroll inside the card: scroll the card's content
+  //    area first, and only flip to the next/previous joke once it's at the edge.
+  const scrollRoot = document.getElementById('joke-root');
+  if (scrollRoot && scrollRoot.scrollHeight > scrollRoot.clientHeight + 2) {
+    const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+    const atBottom = scrollRoot.scrollTop >= scrollRoot.scrollHeight - scrollRoot.clientHeight - 2;
+    const atTop = scrollRoot.scrollTop <= 2;
+    if ((event.deltaY > 0 && !atBottom) || (event.deltaY < 0 && !atTop)) {
+      event.preventDefault();
+      scrollRoot.scrollBy({ top: delta, behavior: 'auto' });
+      return;
+    }
+  }
 
   event.preventDefault();
 

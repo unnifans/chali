@@ -95,6 +95,7 @@ export function renderMemeCard(meme, malayalamMessage = '') {
     ${imageHtml}
     ${textHtml}
   `;
+  root.scrollTop = 0;
 }
 
 function toCloudinaryUrl(url, width) {

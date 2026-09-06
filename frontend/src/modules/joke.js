@@ -69,6 +69,7 @@ export function renderJoke(joke) {
   const root = document.getElementById('joke-root');
   if (!joke) {
     root.innerHTML = `<p class="empty-state">No jokes available right now. Check back soon!</p>`;
+    root.scrollTop = 0;
     updateVoteScore(null);
     return;
   }
@@ -90,8 +91,20 @@ export function renderJoke(joke) {
     `;
     const revealBtn = document.getElementById('reveal-btn');
     revealBtn.addEventListener('click', () => {
-      document.getElementById('joke-answer').classList.remove('hidden');
+      const answerEl = document.getElementById('joke-answer');
+      answerEl.classList.remove('hidden');
       revealBtn.classList.add('hidden');
+      const root = document.getElementById('joke-root');
+      if (root && answerEl) {
+        // Only scroll if the answer hangs below the visible area, and align to
+        // its start so the beginning of the answer is readable right away.
+        // On touch devices the card scrolls internally; on PC the page scrolls.
+        const scroller = root.scrollHeight > root.clientHeight + 2 ? root : null;
+        const visibleBottom = scroller ? scroller.getBoundingClientRect().bottom : window.innerHeight;
+        if (answerEl.getBoundingClientRect().bottom > visibleBottom) {
+          answerEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+      }
     });
 
     let remaining = 3;
@@ -112,6 +125,9 @@ export function renderJoke(joke) {
   }
 
   updateVoteScore(joke);
+
+  // Fresh card starts at the top so the beginning of the text is always visible.
+  root.scrollTop = 0;
 }
 
 export function updateVoteScore(joke) {

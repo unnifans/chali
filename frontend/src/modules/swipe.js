@@ -30,6 +30,15 @@ export function isCardOverflowingViewport() {
   return rect.bottom > window.innerHeight - bottomReserve;
 }
 
+/**
+ * Returns true when the joke content area is a scroll container with content
+ * taller than its visible box, i.e. the card can be scrolled internally.
+ */
+function jokeRootCanScroll() {
+  const root = document.getElementById('joke-root');
+  return !!root && root.scrollHeight > root.clientHeight + 2;
+}
+
 function bailDrag() {
   if (!cardEl) return;
   isDragging = false;
@@ -93,9 +102,10 @@ function handleTouchMove(e) {
   currentDeltaX = touch.clientX - startX;
   currentDeltaY = touch.clientY - startY;
 
-  // Long Q&A content overflowing the viewport: hand vertical gestures back to
-  // native scrolling so the full answer can be read without jiggling the card.
-  if (isCardOverflowingViewport() && Math.abs(currentDeltaY) > Math.abs(currentDeltaX)) {
+  // Long Q&A content: hand vertical gestures back to native scrolling inside
+  // the card so the full answer can be read (or let the page scroll when the
+  // card itself overflows the viewport) without dragging the card itself.
+  if ((isCardOverflowingViewport() || jokeRootCanScroll()) && Math.abs(currentDeltaY) > Math.abs(currentDeltaX)) {
     bailDrag();
     return;
   }
@@ -161,8 +171,8 @@ function handleMouseMove(e) {
   currentDeltaY = e.clientY - startY;
 
   // Match the touch behaviour: don't drag the card vertically when its content
-  // already overflows the viewport.
-  if (isCardOverflowingViewport() && Math.abs(currentDeltaY) > Math.abs(currentDeltaX)) {
+  // overflows the viewport or can scroll inside the card.
+  if ((isCardOverflowingViewport() || jokeRootCanScroll()) && Math.abs(currentDeltaY) > Math.abs(currentDeltaX)) {
     bailDrag();
     return;
   }
