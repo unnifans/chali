@@ -128,7 +128,7 @@ async function loadAndShowNextJoke() {
   if (joke) {
     jokesViewedCount++;
     pushJokeToHistory(joke)
-    if (jokesViewedCount % 2 == 0) {
+    if (jokesViewedCount % 5 == 0) {
       preloadNextMeme();
     }
   }
@@ -139,7 +139,7 @@ function triggerNextCard() {
   clearAutoNext();
   if (isShowingMeme) {
     loadAndShowNextJoke();
-  } else if (jokesViewedCount > 0 && jokesViewedCount % 2 === 0) {
+  } else if (jokesViewedCount > 0 && jokesViewedCount % 5 === 0) {
     showMemeBreak();
   } else {
     loadAndShowNextJoke();
