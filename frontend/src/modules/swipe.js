@@ -16,6 +16,30 @@ let isAnimating = false;
 
 const SWIPE_THRESHOLD = 90; // Pixels required to trigger a swipe
 
+/**
+ * Returns true when the current joke card extends below the bottom of the
+ * viewport, i.e. its content is taller than what the screen can show.
+ * In that case gestures/scroll are handed back to the browser so long
+ * Q&A answers stay fully readable instead of flipping to another joke.
+ */
+export function isCardOverflowingViewport() {
+  const card = document.querySelector('.joke-card');
+  if (!card) return false;
+  const rect = card.getBoundingClientRect();
+  const bottomReserve = 96; // fixed GitHub tab (~80px) + breathing room
+  return rect.bottom > window.innerHeight - bottomReserve;
+}
+
+function bailDrag() {
+  if (!cardEl) return;
+  isDragging = false;
+  isTouchDevice = false;
+  cardEl.classList.remove('swiping');
+  cardEl.style.transition = 'none';
+  cardEl.style.transform = '';
+  cardEl.style.opacity = '';
+}
+
 // More reliable platform detection
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -62,13 +86,21 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
   if (!isDragging || !isTouchDevice || !cardEl) return;
-  e.preventDefault();
 
   const touch = e.touches[0];
   if (!touch) return;
 
   currentDeltaX = touch.clientX - startX;
   currentDeltaY = touch.clientY - startY;
+
+  // Long Q&A content overflowing the viewport: hand vertical gestures back to
+  // native scrolling so the full answer can be read without jiggling the card.
+  if (isCardOverflowingViewport() && Math.abs(currentDeltaY) > Math.abs(currentDeltaX)) {
+    bailDrag();
+    return;
+  }
+
+  e.preventDefault();
 
   const rotateDeg = currentDeltaX * 0.06;
   const opacity = Math.max(0.6, 1 - Math.abs(currentDeltaX) / 500);
@@ -127,6 +159,13 @@ function handleMouseMove(e) {
 
   currentDeltaX = e.clientX - startX;
   currentDeltaY = e.clientY - startY;
+
+  // Match the touch behaviour: don't drag the card vertically when its content
+  // already overflows the viewport.
+  if (isCardOverflowingViewport() && Math.abs(currentDeltaY) > Math.abs(currentDeltaX)) {
+    bailDrag();
+    return;
+  }
 
   const rotateDeg = currentDeltaX * 0.06;
   const opacity = Math.max(0.6, 1 - Math.abs(currentDeltaX) / 500);

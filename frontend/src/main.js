@@ -9,7 +9,7 @@ import {
   fetchLoadingMemes, renderMemeCard, getOrPreloadMeme, preloadNextMeme,
   DEFAULT_MALAYALAM_LOADING_MSG, FIXED_INITIAL_LOADING_GIF_URL
 } from './modules/meme.js';
-import { initCardSwipe, flyOutAndTriggerNext, flyOutAndTriggerPrev, triggerSwipeHint } from './modules/swipe.js';
+import { initCardSwipe, flyOutAndTriggerNext, flyOutAndTriggerPrev, triggerSwipeHint, isCardOverflowingViewport } from './modules/swipe.js';
 import { triggerEmojiBurst } from './modules/particles.js';
 
 const upBtn = document.getElementById('upvote-btn');
@@ -328,6 +328,10 @@ document.addEventListener('wheel', (event) => {
     return;
   }
   if (event.deltaY === 0) return;
+
+  // When a tall Q&A card overflows the viewport, let the page scroll natively
+  // so the full content stays readable instead of flipping to another joke.
+  if (isCardOverflowingViewport()) return;
 
   event.preventDefault();
 
