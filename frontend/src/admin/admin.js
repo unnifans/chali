@@ -15,6 +15,72 @@ const dashboardView = document.getElementById('dashboard-view');
 
 let currentTab = 'quarantine'; // 'quarantine' | 'active' | 'deleted' | 'all'
 let editingJokeId = null; // null = create mode, otherwise editing this doc id
+const selectedIds = new Set(); // ids checked in the current list
+let bulkProcessing = false;
+
+// Bulk bar elements (only shown on the quarantine tab).
+const bulkBar = document.getElementById('bulk-bar');
+const selectAllCheck = document.getElementById('select-all-check');
+const bulkCountEl = document.getElementById('bulk-count');
+const bulkApproveBtn = document.getElementById('bulk-approve-btn');
+const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+
+// ---------- Bulk selection ----------
+
+function updateBulkBar() {
+  bulkBar.classList.toggle('hidden', currentTab !== 'quarantine');
+  bulkCountEl.textContent = `${selectedIds.size} selected`;
+  bulkApproveBtn.textContent = `Approve (${selectedIds.size})`;
+  bulkDeleteBtn.textContent = `Delete (${selectedIds.size})`;
+  const disabled = selectedIds.size === 0 || bulkProcessing;
+  bulkApproveBtn.disabled = disabled;
+  bulkDeleteBtn.disabled = disabled;
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  selectAllCheck.checked = false;
+  document.querySelectorAll('.joke-check').forEach((c) => { c.checked = false; });
+  updateBulkBar();
+}
+
+selectAllCheck.addEventListener('change', () => {
+  const checks = document.querySelectorAll('.joke-check');
+  selectedIds.clear();
+  if (selectAllCheck.checked) {
+    checks.forEach((c) => selectedIds.add(c.dataset.id));
+  }
+  checks.forEach((c) => { c.checked = selectAllCheck.checked; });
+  updateBulkBar();
+});
+
+async function bulkSetStatus(label, status) {
+  const ids = [...selectedIds];
+  if (!ids.length || bulkProcessing) return;
+  const verb = status === 'active' ? 'Approve' : 'Delete';
+  if (!confirm(`${verb} ${ids.length} joke(s)?`)) return;
+
+  bulkProcessing = true;
+  bulkApproveBtn.textContent = 'Working...';
+  bulkDeleteBtn.textContent = 'Working...';
+  updateBulkBar();
+
+  try {
+    await Promise.all(ids.map((jokeId) =>
+      updateDoc(doc(db, 'jokes', jokeId), { status })));
+    await loadJokeList();
+    await loadStats();
+  } catch (err) {
+    console.error(err);
+    alert(`${label} failed: ` + err.message);
+  } finally {
+    bulkProcessing = false;
+    clearSelection();
+  }
+}
+
+bulkApproveBtn.addEventListener('click', () => bulkSetStatus('Approving', 'active'));
+bulkDeleteBtn.addEventListener('click', () => bulkSetStatus('Deleting', 'deleted'));
 
 // ---------- Auth ----------
 
@@ -54,6 +120,7 @@ document.querySelectorAll('#status-tabs .tab').forEach((btn) => {
     btn.classList.add('active');
     document.getElementById('list-title').textContent =
       currentTab === 'all' ? 'All Jokes' : `${capitalize(currentTab)} Jokes`;
+    clearSelection();
     loadJokeList();
   });
 });
@@ -79,6 +146,7 @@ async function loadStats() {
 async function loadJokeList() {
   const container = document.getElementById('queue-root');
   container.innerHTML = '<p>Loading...</p>';
+  clearSelection();
 
   const jokesRef = collection(db, 'jokes');
   const q = currentTab === 'all'
@@ -98,11 +166,14 @@ function renderList(jokes) {
   const container = document.getElementById('queue-root');
   if (jokes.length === 0) {
     container.innerHTML = '<p>Nothing here.</p>';
+    updateBulkBar();
     return;
   }
 
+  const allowBulk = currentTab === 'quarantine';
   container.innerHTML = jokes.map((joke) => `
     <div class="queue-item admin-card" data-id="${joke.id}">
+      ${allowBulk ? `<label class="queue-item-check"><input type="checkbox" class="joke-check" data-id="${joke.id}" /></label>` : ''}
       <div class="queue-item-body">
         <p><strong>${joke.type}</strong>: ${escapeHtml(joke.question)}
           <span class="status-pill ${joke.status}">${joke.status}</span>
@@ -120,6 +191,13 @@ function renderList(jokes) {
     </div>
   `).join('');
 
+  container.querySelectorAll('.joke-check').forEach((cb) =>
+    cb.addEventListener('change', () => {
+      if (cb.checked) selectedIds.add(cb.dataset.id);
+      else selectedIds.delete(cb.dataset.id);
+      updateBulkBar();
+    }));
+
   container.querySelectorAll('.btn-approve').forEach((btn) =>
     btn.addEventListener('click', () => setStatus(btn.dataset.id, 'active')));
   container.querySelectorAll('.btn-delete').forEach((btn) =>
@@ -128,6 +206,7 @@ function renderList(jokes) {
     btn.addEventListener('click', () => setStatus(btn.dataset.id, 'active')));
   container.querySelectorAll('.btn-edit').forEach((btn) =>
     btn.addEventListener('click', () => openEditForm(jokes.find((j) => j.id === btn.dataset.id))));
+  updateBulkBar();
 }
 
 async function setStatus(jokeId, status) {

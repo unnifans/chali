@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <div class="toolbar">
+<div class="toolbar">
       <div class="tabs" id="status-tabs">
         <button class="tab active" data-status="quarantine">Quarantine</button>
         <button class="tab" data-status="active">Active</button>
@@ -56,7 +56,19 @@
         <button class="tab" data-status="all">All</button>
       </div>
       <button id="new-joke-btn" class="btn-accent">+ New Joke</button>
-    </div>
+      </div>
+
+      <div id="bulk-bar" class="admin-card bulk-bar hidden">
+        <label class="bulk-select">
+          <input type="checkbox" id="select-all-check" />
+          <span>Select all</span>
+        </label>
+        <span id="bulk-count" class="bulk-count">0 selected</span>
+        <div class="bulk-actions">
+          <button id="bulk-approve-btn" class="btn-approve" disabled>Approve (0)</button>
+          <button id="bulk-delete-btn" class="btn-delete" disabled>Delete (0)</button>
+        </div>
+      </div>
 
     <!-- Create / Edit form - shared, toggled between the two modes -->
     <form id="joke-form" class="admin-card joke-form hidden">
