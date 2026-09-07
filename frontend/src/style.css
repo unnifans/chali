@@ -69,6 +69,17 @@ body::after {
     z-index: 1;
 }
 
+.ad-slot {
+    display: flex;
+    justify-content: center;
+    margin: 22px 0 0 0;
+}
+
+.ad-slot ins.adsbygoogle {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
 .hidden { display: none !important; }
 
 /* ---------- Feed view ---------- */
