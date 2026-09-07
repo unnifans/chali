@@ -179,7 +179,7 @@ export function renderJoke(joke) {
       if (root && answerEl) {
         // Only scroll if the answer hangs below the visible area, and align to
         // its start so the beginning of the answer is readable right away.
-        // On touch devices the card scrolls internally; on PC the page scrolls.
+        // The card never scrolls internally — the page scrolls instead.
         const scroller = root.scrollHeight > root.clientHeight + 2 ? root : null;
         const visibleBottom = scroller ? scroller.getBoundingClientRect().bottom : window.innerHeight;
         if (answerEl.getBoundingClientRect().bottom > visibleBottom) {

@@ -137,11 +137,8 @@ body::after {
 .joke-card {
   display: flex;
   flex-direction: column;
-  /* Cap the card so long Q&A content scrolls inside it instead of overflowing
-     the page. Reserve = body padding (76px) + header incl. logo (~116px) +
-     fixed GitHub tab (~88px). */
-  max-height: min(calc(100vh - 280px), 640px);
-  max-height: min(calc(100dvh - 280px), 640px);
+  /* The card grows to fit the entire joke + image; longer content is revealed
+     by scrolling the page, never by scrolling inside the card. */
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
@@ -149,42 +146,17 @@ body::after {
   cursor: grab;
 }
 
-@media (max-height: 480px) {
-  /* Landscape/short screens: keep the card usable with a smaller reserve. */
-  .joke-card {
-    max-height: min(calc(100vh - 170px), 640px);
-    max-height: min(calc(100dvh - 170px), 640px);
-  }
-}
-
-/* Scrollable joke content area: scrolling stays inside the card while the
-   vote pill, next button and submit toggle remain pinned below it. */
+/* Joke content is always fully laid out; the page scrolls to reveal the rest. */
 #joke-root {
-  flex: 1 1 auto;
+  flex: none;
   min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
 }
 
 .joke-card .vote-pill,
 .joke-card .next-btn,
 .joke-card .submit-toggle-btn {
   flex-shrink: 0;
-}
-
-/* PC web view: no app-style height cap / internal card scroll. The card takes
-   its natural height and the page scrolls normally to reveal longer content. */
-@media (hover: hover) and (pointer: fine) {
-  .joke-card {
-    max-height: none;
-  }
-
-  #joke-root {
-    flex: none;
-    min-height: 0;
-    overflow: visible;
-  }
 }
 
 .joke-card.swiping {
