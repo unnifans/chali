@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "chali-api",
+  "main": "src/index.js",
+  "compatibility_date": "2025-01-01",
+
+  "vars": {
+    "FIREBASE_PROJECT_ID": "jokeymalayalam",
+    "ADMIN_EMAILS": "wastedev2005@gmail.com"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "chali-d1",
+      "database_id": "112fd0db-0614-4a14-b8f4-4ffbb1b1ce49",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

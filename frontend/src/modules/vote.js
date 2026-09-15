@@ -1,13 +1,10 @@
-import { doc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '../firebase-config.js';
+import { api } from '../api.js';
 
 const QUARANTINE_THRESHOLD = 3;
 
-// Read-free vote writes: `increment()` applies a delta server-side WITHOUT a
-// read in front of it, so each vote costs 1 write instead of 1 read + 1 write.
-// The status field is intentionally left untouched by the client — the
-// onVoteUpdate Cloud Function reconciles quarantine/active based on the true
-// totals, so concurrent votes can never be rejected by the security rules.
+// Vote writes go through the Worker which applies atomic, read-free
+// increments and reconciles quarantine/active status server-side (the logic
+// that used to live in the onVoteUpdate Cloud Function).
 
 function voteDelta(actionType, directionDetails) {
   const delta = { upvotes: 0, downvotes: 0 };
@@ -29,22 +26,18 @@ function voteDelta(actionType, directionDetails) {
   return delta;
 }
 
-// Returns { upvotes, downvotes, status } as seen optimistically by this client
-// (based on the counts it last fetched), or null on failure.
+// Returns { upvotes, downvotes, status } from the server (authoritative), or
+// null on failure.
 export async function castVote(jokeId, actionType, directionDetails, options = {}) {
-  const { currentUpvotes = 0, currentDownvotes = 0 } = options;
   const delta = voteDelta(actionType, directionDetails);
 
-  const upvotes = currentUpvotes + delta.upvotes;
-  const downvotes = currentDownvotes + delta.downvotes;
-  const status = upvotes - downvotes < QUARANTINE_THRESHOLD ? 'quarantine' : 'active';
-
   try {
-    await updateDoc(doc(db, 'jokes', jokeId), {
-      upvotes: increment(delta.upvotes),
-      downvotes: increment(delta.downvotes),
-    });
-    return { upvotes, downvotes, status };
+    const res = await api.castVote(jokeId, delta.upvotes, delta.downvotes);
+    return {
+      upvotes: res.upvotes,
+      downvotes: res.downvotes,
+      status: res.status,
+    };
   } catch (err) {
     console.error('Vote update failed:', err);
     return null;

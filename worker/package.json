@@ -1,0 +1,17 @@
+{
+  "name": "chali-api-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy",
+    "migrate:local": "wrangler d1 migrations apply chali-d1 --local",
+    "migrate:remote": "wrangler d1 migrations apply chali-d1 --remote"
+  },
+  "dependencies": {
+    "jose": "^5.9.6"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

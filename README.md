@@ -2,30 +2,30 @@
 
 What this is
 
-Chali is a small web app for serving and moderating Malayalam jokes. It provides a public page that shows a random joke and an admin panel to review and approve user submissions. The app uses Firebase (Firestore + Auth + Cloud Functions) for data and Cloudflare Pages for static hosting.
+Chali is a small web app for serving and moderating Malayalam jokes. It provides a public page that shows a random joke and an admin panel to review and approve user submissions. Data lives in **Cloudflare D1** (SQLite) behind a **Cloudflare Worker API**; Firebase is used only for admin authentication, and Cloudflare Pages serves the static frontend.
 
 Stack
-- **Language(s):** JavaScript (frontend + Cloud Functions), CSS, HTML
-- **Framework / runtime:** Vite (frontend), Firebase Cloud Functions (Node 20)
-- **Notable libraries:** Firebase (firebase, firebase-admin, firebase-functions), Vite
+- **Language(s):** JavaScript (frontend + Worker), CSS, HTML
+- **Framework / runtime:** Vite (frontend), Cloudflare Workers (Node-compatible runtime), Cloudflare D1 (SQLite)
+- **Notable libraries:** jose (Firebase ID-token verification in the Worker), firebase/auth (admin login only), Vite
 
 How it's organized
 
 ```
 frontend/        Vite app: public page (index.html) + admin panel (admin.html)
-  public/        static assets
+  public/        static assets (incl. ads.txt)
   src/           frontend source (JS/CSS/HTML entrypoints)
-functions/       Firebase Cloud Functions (auto-quarantine logic on votes)
-scripts/         one-off scripts (seed data)
-firebase.json    Firebase project configuration
-firestore.rules  Firestore security rules
-firestore.indexes.json  Composite index for querying jokes
-package.json     root npm scripts that proxy to frontend/scripts
+worker/          Cloudflare Worker API (src/index.js, src/auth.js) + D1 migrations
+scripts/         one-off scripts (seed data, Firestore -> D1 export)
+functions/       RETIRED: old Firebase Cloud Functions; kept for reference only
+firebase.json    Firebase project configuration (auth only now)
+package.json     root npm scripts that proxy to frontend/scripts/worker
 ```
 
 How it fits together
-- The frontend (Vite) is a static site deployed to Cloudflare Pages (or served locally with `npm run dev`). It reads/writes joke documents in Firestore and uses Firebase Auth for the admin panel.
-- Cloud Functions run on vote updates and auto-quarantine jokes that fall below a score threshold.
+- The frontend (Vite) is a static site deployed to Cloudflare Pages. Every read/write goes through the Worker API (`src/api.js` wraps all `/api/*` routes) into D1.
+- The Worker authenticates admin requests by verifying a Firebase ID token (jose + JWKS) and checking the `ADMIN_EMAILS` allowlist. Public endpoints need no login.
+- Vote status reconciliation (auto-quarantine below a score threshold) happens inside the Worker's vote handler — this code used to live in the `onVoteUpdate` Cloud Function, which is now retired.
 
 How to run it (shortest path)
 
@@ -53,46 +53,56 @@ Required environment variables (frontend/.env)
 - VITE_FIREBASE_AUTH_DOMAIN
 - VITE_FIREBASE_APP_ID
 - VITE_FIREBASE_PROJECT_ID  (the repo uses `jokeymalayalam` by default)
-- VITE_CLOUDINARY_CLOUD_NAME
-- VITE_CLOUDINARY_UPLOAD_PRESET
+- VITE_API_BASE             (Worker URL, no trailing slash; leave empty for same-origin `/api`)
 
 Notes:
 - Add your Cloudflare Pages domain (e.g. `your-project.pages.dev`) to Firebase Console → Authentication → Settings → Authorized domains for admin login to work.
 - While testing locally, `localhost` is usually already allowed by Firebase Auth.
 
-Seed the database (optional)
-
-1. Download a Firebase service account key and save it as `scripts/service-account.json` (see the comment at the top of `scripts/seed.js`).
-2. Run the seed script:
+Run the Worker locally (optional, needs `wrangler`)
 
 ```bash
-cd scripts
+cd worker
 npm install
-node seed.js
+copy .dev.vars.example .dev.vars  # Windows; or `cp .dev.vars.example .dev.vars`
+npm run migrate:local              # apply worker/migrations to a local D1
+npm run dev                        # http://localhost:8787
 ```
+
+Point the frontend at it with `VITE_API_BASE=http://localhost:8787` in `frontend/.env`.
+
+Worker environment
+- `FIREBASE_PROJECT_ID` — required; used to verify Firebase ID tokens (JWKS from `securetoken@system.gserviceaccount.com`).
+- `ADMIN_EMAILS` — comma-separated allowlist of admin emails. Empty means any authenticated Firebase user is treated as admin (for local dev). Set these in production via `wrangler secret put` or `[vars]` in the dashboard.
+- D1 binding name: `DB`.
+
+Seed or migrate data
+
+The tables are jokes and memes. Existing Firestore data can be moved to D1 directly:
+
+```bash
+# 1. From repo root: export Firestore -> JSON + INSERT SQL
+npm run export-d1            # needs scripts/service-account.json (see scripts/export-firestore.js header)
+
+# 2. Apply the SQL to D1 from the worker folder
+cd worker
+npm run migrate:remote       # apply schema (worker/migrations) to the D1 database
+npx wrangler d1 execute chali-d1 --remote --file ../scripts/_d1_export/insert_jokes.sql
+npx wrangler d1 execute chali-d1 --remote --file ../scripts/_d1_export/insert_memes.sql
+```
+
+The D1 schema keeps Firestore document IDs as primary keys, so re-exporting and re-running the inserts is safe (`INSERT OR IGNORE`).
 
 Deploy
 
-- Deploy Cloud Functions
+- Deploy the Worker + run D1 migrations
 
 ```bash
-cd functions
+cd worker
 npm install
-npm run deploy
-# or from repo root: npm run build && firebase deploy --only functions
+npm run migrate:remote        # applies worker/migrations to the remote D1
+npm run deploy               # wrangler deploy — uses worker/wrangler.jsonc
 ```
-
-- Deploy Firestore rules and indexes (if you edit them)
-
-```bash
-firebase deploy --only firestore:rules,firestore:indexes
-```
-
-Read efficiency (critical at viral scale)
-
-The public page no longer pulls the whole active joke pool. Firestore auto-generated document IDs are already random, so the app walks the pool in document-ID order with `where('status','==','active').orderBy(documentId()).startAfter(cursor).limit(1)` — exactly **one Firestore read per joke**. Memes are cached in localStorage for 24h and votes use read-free `increment()` writes.
-
-No migration or composite index is needed for the joke walk (ordering by document ID is served by the automatic single-field index on `status`); the rules/index deploy above just keeps them in sync with the repo. If the walk query ever fails, the app transparently falls back to the old whole-pool fetch.
 
 - Deploy frontend to Cloudflare Pages (Git-connected recommended)
   - Cloudflare Pages build settings: Framework preset **Vite**, build command `npm run build`, output directory `frontend/dist`, root `frontend`.
@@ -106,20 +116,26 @@ npm run build
 npx wrangler pages deploy dist --project-name=malayalam-joke-app
 ```
 
+Read efficiency (critical at viral scale)
+
+The public page never pulls a list of jokes. `GET /api/jokes/next` runs a random-walk over the D1 `(status, rand, id)` index and returns exactly **one row per request**. The frontend keeps a small cursor (`{ rand, id }`) and the Worker wraps around when the walk reaches the end. Jokes receive their `rand` key only when they become `active`, so quarantined/deleted rows are never part of the walk. Loading memes are cached in localStorage for 24h and votes are handled by the Worker as atomic `UPDATE ... + delta` writes (read-free), followed by status reconciliation.
+
 What to test once it's running
 - Public page loads a random joke
 - QnA jokes reveal the answer on click; single jokes show text
 - Upvote/downvote work once per user and then disable for that joke
-- Submitting a joke creates a `quarantine` doc in Firestore
-- Logging into `/admin.html` shows submissions in the queue
+- Submitting a joke creates a `quarantine` row in D1
+- Logging into `/admin.html` shows submissions in the queue (Firebase Auth + Worker token)
 - Approving flips a joke to `active` and it appears on the public page
-- Downvoting an active joke enough (net score < 3) auto-quarantines it (check Cloud Function logs with `firebase functions:log`)
+- Downvoting an active joke enough (net score < 3) auto-quarantines it (Worker vote handler)
 
 Useful files
 - `frontend/index.html`, `frontend/admin.html` — the two entry pages
 - `frontend/.env.example` — environment template for the frontend
-- `functions/index.js` (entry for Cloud Functions) — auto-quarantine logic
-- `firestore.rules`, `firestore.indexes.json` — security and index configuration
+- `frontend/src/api.js` — single wrapper for every Worker `/api/*` route
+- `worker/src/index.js` — the Worker API (public + admin endpoints)
+- `worker/migrations/0001_init.sql` — D1 schema (jokes, memes)
+- `scripts/export-firestore.js` — one-time Firestore -> D1 export
 - `scripts/seed.js` — seed test jokes
 
 Contributing
@@ -128,7 +144,3 @@ Contributing
 
 Contact
 - Repo owner: unnifans
-
----
-
-(Updated README: improved structure, clearer setup + deploy steps.)

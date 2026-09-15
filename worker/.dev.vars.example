@@ -1,0 +1,6 @@
+# Local-only Worker secrets for `wrangler dev` / `wrangler d1 execute --local`.
+# Copy to .dev.vars and fill in. NEVER commit .dev.vars.
+FIREBASE_PROJECT_ID=jokeymalayalam
+
+# Comma-separated admin emails. Empty = any verified Firebase user is admin (dev).
+ADMIN_EMAILS=

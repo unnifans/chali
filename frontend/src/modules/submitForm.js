@@ -1,10 +1,10 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase-config.js';
+import { api } from '../api.js';
 
-const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-
-export async function uploadImageToCloudinary(file) {
+// Uploads an image via the future R2 presign flow.
+// NOTE: The Worker presign endpoint (/api/uploads) is part of the R2 migration
+// and is not wired up yet — until it lands, image uploads are deferred and the
+// submit still succeeds with no image.
+export async function uploadImage(file) {
   if (!file) return { imageUrl: null, imagePublicId: null };
 
   const MAX_SIZE_MB = 5;
@@ -14,26 +14,10 @@ export async function uploadImageToCloudinary(file) {
   if (!file.type.startsWith('image/')) {
     throw new Error('File must be an image');
   }
-  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
-    throw new Error('Image upload is not configured yet (missing Cloudinary env vars)');
-  }
 
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-  formData.append('folder', 'malayalam-joke-app');
-
-  const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-    { method: 'POST', body: formData }
-  );
-
-  if (!res.ok) {
-    throw new Error('Image upload failed');
-  }
-
-  const data = await res.json();
-  return { imageUrl: data.secure_url, imagePublicId: data.public_id };
+  // TODO(R2): call Worker /api/uploads to get a presigned PUT URL, upload the
+  // file, and return the public URL. For now images are dropped.
+  return { imageUrl: null, imagePublicId: null };
 }
 
 export function initSubmitForm() {
@@ -136,20 +120,14 @@ export function initSubmitForm() {
       if (!question) throw new Error('Joke text is required');
       if (type === 'qna' && !answer) throw new Error('Answer is required for QnA jokes');
 
-      const imageData = await uploadImageToCloudinary(imageFile);
+      const imageData = await uploadImage(imageFile);
 
-      await addDoc(collection(db, 'jokes'), {
+      await api.submitJoke({
         type,
         question,
         answer,
         imageUrl: imageData.imageUrl,
         imagePublicId: imageData.imagePublicId,
-        upvotes: 5,
-        downvotes: 0,
-        status: 'quarantine', // held for admin approval
-        submittedBy: 'anonymous',
-        timestamp: serverTimestamp(),
-        createdAt: serverTimestamp(),
       });
 
       statusEl.textContent = 'Thanks! Your joke is pending review. 🎉';

@@ -1,5 +1,8 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+
+// Firebase is now used ONLY for admin authentication. All data reads/writes
+// go through the Cloudflare Worker API (see src/api.js), so Firestore is no
+// longer imported anywhere.
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -9,13 +12,6 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-
-// Best-effort offline cache. Fails silently in multi-tab scenarios or
-// unsupported browsers - that's fine, it's a nice-to-have, not required.
-enableIndexedDbPersistence(db).catch((err) => {
-  console.warn('Firestore offline persistence not enabled:', err.code);
-});
 
 // NOTE: getAuth() is intentionally NOT called here. It's only imported
 // inside src/admin/admin.js, so the public bundle never ships Auth SDK code.

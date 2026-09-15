@@ -1,14 +1,11 @@
 import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from 'firebase/auth';
-import {
-  collection, query, where, orderBy, getDocs, doc, updateDoc, addDoc,
-  serverTimestamp, getCountFromServer
-} from 'firebase/firestore';
-import { app, db } from '../firebase-config.js';
-import { uploadImageToCloudinary } from '../modules/submitForm.js';
+import { getApp } from 'firebase/app';
+import { setAuthToken, api } from '../api.js';
+import { uploadImage } from '../modules/submitForm.js';
 
-const auth = getAuth(app);
+const auth = getAuth(getApp());
 
 const loginView = document.getElementById('login-view');
 const dashboardView = document.getElementById('dashboard-view');
@@ -66,8 +63,7 @@ async function bulkSetStatus(label, status) {
   updateBulkBar();
 
   try {
-    await Promise.all(ids.map((jokeId) =>
-      updateDoc(doc(db, 'jokes', jokeId), { status })));
+    await Promise.all(ids.map((jokeId) => api.adminSetStatus(jokeId, status)));
     await loadJokeList();
     await loadStats();
   } catch (err) {
@@ -84,13 +80,20 @@ bulkDeleteBtn.addEventListener('click', () => bulkSetStatus('Deleting', 'deleted
 
 // ---------- Auth ----------
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
+    try {
+      const token = await user.getIdToken();
+      setAuthToken(token);
+    } catch (err) {
+      console.error('Failed to get auth token:', err);
+    }
     loginView.classList.add('hidden');
     dashboardView.classList.remove('hidden');
     loadStats();
     loadJokeList();
   } else {
+    setAuthToken(null);
     loginView.classList.remove('hidden');
     dashboardView.classList.add('hidden');
   }
@@ -128,17 +131,15 @@ document.querySelectorAll('#status-tabs .tab').forEach((btn) => {
 // ---------- Stats ----------
 
 async function loadStats() {
-  const jokesRef = collection(db, 'jokes');
-  const [total, active, quarantine, deleted] = await Promise.all([
-    getCountFromServer(query(jokesRef)),
-    getCountFromServer(query(jokesRef, where('status', '==', 'active'))),
-    getCountFromServer(query(jokesRef, where('status', '==', 'quarantine'))),
-    getCountFromServer(query(jokesRef, where('status', '==', 'deleted'))),
-  ]);
-  document.getElementById('stat-total').textContent = total.data().count;
-  document.getElementById('stat-active').textContent = active.data().count;
-  document.getElementById('stat-quarantine').textContent = quarantine.data().count;
-  document.getElementById('stat-deleted').textContent = deleted.data().count;
+  try {
+    const stats = await api.adminStats();
+    document.getElementById('stat-total').textContent = stats.total ?? 0;
+    document.getElementById('stat-active').textContent = stats.active ?? 0;
+    document.getElementById('stat-quarantine').textContent = stats.quarantine ?? 0;
+    document.getElementById('stat-deleted').textContent = stats.deleted ?? 0;
+  } catch (err) {
+    console.error('Failed to load stats:', err);
+  }
 }
 
 // ---------- List ----------
@@ -148,14 +149,9 @@ async function loadJokeList() {
   container.innerHTML = '<p>Loading...</p>';
   clearSelection();
 
-  const jokesRef = collection(db, 'jokes');
-  const q = currentTab === 'all'
-    ? query(jokesRef, orderBy('timestamp', 'desc'))
-    : query(jokesRef, where('status', '==', currentTab), orderBy('timestamp', 'desc'));
-
   try {
-    const snap = await getDocs(q);
-    renderList(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    const res = await api.adminList(currentTab === 'all' ? 'all' : currentTab);
+    renderList((res && res.jokes) || []);
   } catch (err) {
     console.error(err);
     container.innerHTML = `<p>Couldn't load jokes: ${escapeHtml(err.message)}</p>`;
@@ -210,7 +206,7 @@ function renderList(jokes) {
 }
 
 async function setStatus(jokeId, status) {
-  await updateDoc(doc(db, 'jokes', jokeId), { status });
+  await api.adminSetStatus(jokeId, status);
   loadJokeList();
   loadStats();
 }
@@ -299,28 +295,20 @@ form.addEventListener('submit', async (e) => {
 
     let imagePatch = {};
     if (imageFile) {
-      const uploaded = await uploadImageToCloudinary(imageFile);
+      const uploaded = await uploadImage(imageFile);
       imagePatch = { imageUrl: uploaded.imageUrl, imagePublicId: uploaded.imagePublicId };
     }
 
     if (editingJokeId) {
-      await updateDoc(doc(db, 'jokes', editingJokeId), {
+      await api.adminUpdate(editingJokeId, {
         type, question, answer, status, ...imagePatch,
       });
       formMsg.textContent = 'Saved.';
     } else {
-      await addDoc(collection(db, 'jokes'), {
-        type,
-        question,
-        answer,
+      await api.adminCreate({
+        type, question, answer, status,
         imageUrl: imagePatch.imageUrl || null,
         imagePublicId: imagePatch.imagePublicId || null,
-        upvotes: 5,
-        downvotes: 0,
-        status,
-        submittedBy: 'admin',
-        timestamp: serverTimestamp(),
-        createdAt: serverTimestamp(),
       });
       formMsg.textContent = 'Created.';
     }

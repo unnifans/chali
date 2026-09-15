@@ -5,6 +5,9 @@
     "dev": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",
     "seed-memes": "npm run seed-memes --prefix scripts",
-    "seed-jokes": "npm run seed-jokes --prefix scripts"
+    "seed-jokes": "npm run seed-jokes --prefix scripts",
+    "export-d1": "npm run export-d1 --prefix scripts",
+    "deploy:worker": "npm run deploy --prefix worker",
+    "migrate:d1": "npm run migrate:remote --prefix worker"
   }
 }

@@ -1,5 +1,4 @@
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase-config.js';
+import { api } from '../api.js';
 
 // Edit or replace this Malayalam loading message anytime:
 export const DEFAULT_MALAYALAM_LOADING_MSG = 'ദേ ഇപ്പൊ ശരിയാക്കിത്തരാ.... 😁';
@@ -38,7 +37,7 @@ function writeMemeCache(memes) {
 }
 
 /**
- * Fetches memes tagged with "loading" from Firestore, hitting the network at
+ * Fetches memes tagged with "loading" from the API, hitting the network at
  * most once per MEME_CACHE_TTL per user thanks to the localStorage cache.
  */
 export async function fetchLoadingMemes() {
@@ -48,13 +47,12 @@ export async function fetchLoadingMemes() {
     return loadingMemes;
   }
   try {
-    const q = query(collection(db, 'memes'), where('tag', '==', 'loading'));
-    const snap = await getDocs(q);
-    loadingMemes = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const res = await api.getMemes('loading');
+    loadingMemes = (res && res.memes) || [];
     writeMemeCache(loadingMemes);
-    console.log(`Loaded ${loadingMemes.length} memes from Firestore.`);
+    console.log(`Loaded ${loadingMemes.length} memes from API.`);
   } catch (err) {
-    console.error('Error fetching loading memes from Firestore:', err);
+    console.error('Error fetching loading memes:', err);
     loadingMemes = [];
   }
   return loadingMemes;

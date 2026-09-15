@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "seed-jokes": "node seed.js",
-    "seed-memes": "node seed-memes.js"
+    "seed-memes": "node seed-memes.js",
+    "export-d1": "node export-firestore.js"
   },
   "dependencies": {
     "cloudinary": "^2.2.0",

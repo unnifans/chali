@@ -1,105 +1,54 @@
-import { collection, query, where, orderBy, startAfter, getDocs, documentId } from 'firebase/firestore';
-import { db } from '../firebase-config.js';
+import { api } from '../api.js';
 
-// Read-efficient joke fetcher (critical at viral scale).
+// Read-efficient joke fetcher across the Chali API.
 //
-// Old approach: pull the ENTIRE active pool with where('status','==','active'),
-// which bills one Firestore read per active joke on every page load and again
-// every time the shuffle cycle ran out. With hundreds of active jokes that is
-// thousands of reads per user session.
-//
-// New approach: Firestore auto-generated document IDs are already random, so we
-// walk the pool in document-ID order with
-//   where('status','==','active').orderBy(documentId()).startAfter(cursor).limit(1)
-// which returns exactly ONE joke = ONE read. A local cursor walks forward
-// through the globally random ID order and wraps when it hits the end, while a
-// small "recently shown" set keeps repeats out of any given session.
-//
-// No schema field, no backfill migration, and no composite index are needed —
-// ordering by document ID is served by the automatic single-field index on
-// `status`. If the query ever fails (e.g. network), it falls back to the old
-// whole-pool fetch so the app never breaks.
+// The Worker serves exactly ONE active joke per request (a random-walk over a
+// SQLite (status, rand) index), instead of pulling the whole pool like the old
+// Firestore approach. A local cursor (last { rand, id }) walks forward and the
+// worker wraps when it reaches the end; a small "recently shown" set keeps
+// repeats out of any given session.
 
 const MAX_WALK_ATTEMPTS = 8;
 const RECENT_LIMIT = 40;
 
-// Firestore auto IDs use this alphabet; drawing a random 20-char cursor drops
-// each session at a random position in the ordering.
-const ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
-function randomIdCursor() {
-  let s = '';
-  for (let i = 0; i < 20; i++) {
-    s += ID_ALPHABET[Math.floor(Math.random() * ID_ALPHABET.length)];
-  }
-  return s;
-}
-
-let idCursor = randomIdCursor();
+let cursor = null;
 const recentShown = new Set();
 let lastShownId = null;
 let currentJoke = null;
 
-// Legacy whole-pool fallback (used if the document-ID walk ever fails).
-let useLegacyPool = false;
-let legacyPool = [];
-let legacyShown = new Set();
-
-function walkQuery() {
-  return query(
-    collection(db, 'jokes'),
-    where('status', '==', 'active'),
-    orderBy(documentId()),
-    startAfter(idCursor),
-    limit(1)
-  );
-}
-
 export async function fetchRandomJoke() {
-  if (useLegacyPool) {
-    return fetchFromLegacyPool();
-  }
-
-  // Walk the document-ID ordering: each iteration costs exactly one read.
+  // Random-walk: each iteration costs exactly one API call / one row.
   for (let attempt = 0; attempt < MAX_WALK_ATTEMPTS; attempt++) {
-    let snap;
+    let joke;
     try {
-      snap = await getDocs(walkQuery());
+      const res = await api.getNextJoke(cursor);
+      joke = res && res.joke ? res.joke : null;
     } catch (err) {
-      console.warn('Doc-ID walk query failed, falling back to pool fetch:', err);
-      useLegacyPool = true;
-      return fetchFromLegacyPool();
+      console.error('Failed to fetch joke:', err);
+      return null;
     }
 
-    if (snap.empty) {
-      // Walked past the highest ID — wrap around to the beginning.
-      idCursor = '';
-      continue;
-    }
+    if (!joke) break;
 
-    const doc = snap.docs[0];
-    const joke = { id: doc.id, ...doc.data() };
-    idCursor = joke.id; // next query is strictly after this doc
+    cursor = { rand: joke.rand ?? 0, id: joke.id };
 
-    if (recentShown.has(joke.id)) {
-      continue; // shown recently — the next step naturally moves past it
+    if (joke.id === lastShownId || recentShown.has(joke.id)) {
+      continue; // shown recently — the next step walks past it
     }
 
     recordShown(joke);
     return joke;
   }
 
-  // Tiny pool that can't avoid a repeat: admit one and reset the recency set.
-  const snap = await getDocs(walkQuery());
-  if (snap.empty) {
-    currentJoke = null;
-    return null;
+  // Pool exhausted or tiny: return the last fetched joke so the session
+  // keeps working rather than showing an empty state.
+  const last = currentJoke;
+  if (last) {
+    recentShown.clear();
+    lastShownId = last.id;
+    return last;
   }
-  const doc = snap.docs[0];
-  const joke = { id: doc.id, ...doc.data() };
-  recentShown.clear();
-  recordShown(joke);
-  return joke;
+  return null;
 }
 
 function recordShown(joke) {
@@ -110,32 +59,6 @@ function recordShown(joke) {
     if (oldest !== undefined) recentShown.delete(oldest);
   }
   currentJoke = joke;
-}
-
-async function fetchFromLegacyPool() {
-  if (legacyPool.length === 0) {
-    const q = query(collection(db, 'jokes'), where('status', '==', 'active'));
-    const snap = await getDocs(q);
-    legacyPool = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    legacyShown = new Set();
-  }
-
-  let candidates = legacyPool.filter((j) => !legacyShown.has(j.id));
-  if (candidates.length === 0) {
-    candidates = legacyPool.filter((j) => j.id !== lastShownId);
-    if (candidates.length === 0) candidates = legacyPool;
-  }
-
-  if (candidates.length === 0) {
-    currentJoke = null;
-    return null;
-  }
-
-  const picked = candidates[Math.floor(Math.random() * candidates.length)];
-  legacyShown.add(picked.id);
-  lastShownId = picked.id;
-  currentJoke = picked;
-  return currentJoke;
 }
 
 // Called after a successful vote so the currently displayed joke reflects the
