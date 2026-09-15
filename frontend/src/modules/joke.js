@@ -6,6 +6,8 @@ import { api } from '../api.js';
 // RANDOM() in SQLite), so there is no shared ordering for devices to converge
 // on. The local "recently shown" set keeps repeats out of any given session —
 // if the Worker returns one, we simply draw again (each draw is one cheap row).
+// The next joke is prefetched in the background as soon as one is shown, so
+// swipe transitions render instantly instead of waiting on the network.
 
 const MAX_WALK_ATTEMPTS = 8;
 const RECENT_LIMIT = 40;
@@ -14,16 +16,45 @@ const recentShown = new Set();
 let lastShownId = null;
 let currentJoke = null;
 
+let prefetchedJoke = null;
+let prefetchPromise = null;
+
+async function drawRandomJoke() {
+  try {
+    const res = await api.getNextJoke();
+    return res && res.joke ? res.joke : null;
+  } catch (err) {
+    console.error('Failed to fetch joke:', err);
+    return null;
+  }
+}
+
+// Warm the NEXT joke in the background as soon as one is displayed. The swipe
+// animation then renders instantly instead of leaving the previous joke on
+// screen while the network round-trip completes.
+export function startPrefetch() {
+  if (prefetchPromise) return;
+  prefetchPromise = drawRandomJoke()
+    .then((joke) => {
+      prefetchedJoke = joke;
+    })
+    .catch(() => {
+      prefetchedJoke = null;
+    })
+    .finally(() => {
+      prefetchPromise = null;
+    });
+}
+
 export async function fetchRandomJoke() {
-  // Random draw: each iteration costs exactly one API call / one row.
+  // Random draw: use the prefetched joke when available, else draw live.
+  // Each draw costs exactly one API call / one row.
   for (let attempt = 0; attempt < MAX_WALK_ATTEMPTS; attempt++) {
-    let joke;
-    try {
-      const res = await api.getNextJoke();
-      joke = res && res.joke ? res.joke : null;
-    } catch (err) {
-      console.error('Failed to fetch joke:', err);
-      return null;
+    let joke = prefetchedJoke;
+    prefetchedJoke = null;
+
+    if (!joke) {
+      joke = await drawRandomJoke();
     }
 
     if (!joke) break;
@@ -55,6 +86,7 @@ function recordShown(joke) {
     if (oldest !== undefined) recentShown.delete(oldest);
   }
   currentJoke = joke;
+  startPrefetch(); // keep the pipeline full for the next swipe
 }
 
 // Called after a successful vote so the currently displayed joke reflects the

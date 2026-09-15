@@ -1,6 +1,6 @@
 import './firebase-config.js';
 import {
-  fetchRandomJoke, renderJoke, updateVoteScore, applyVoteResult, getCurrentJoke
+  fetchRandomJoke, renderJoke, updateVoteScore, applyVoteResult, getCurrentJoke, startPrefetch
 } from './modules/joke.js';
 import { castVote, showToast } from './modules/vote.js';
 import { hasVoted, markVoted, unmarkVoted, getVoteDirection } from './modules/voteCache.js';
@@ -48,6 +48,7 @@ function showPreviousJoke() {
     isShowingMeme = false;
     renderJoke(joke);
     reflectVoteState(joke);
+    startPrefetch();
     return;
   }
 
@@ -62,6 +63,7 @@ function showPreviousJoke() {
   isShowingMeme = false;
   renderJoke(joke);
   reflectVoteState(joke);
+  startPrefetch();
 }
 
 let jokesViewedCount = 0;
