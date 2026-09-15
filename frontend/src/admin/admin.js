@@ -1,11 +1,11 @@
 import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from 'firebase/auth';
-import { getApp } from 'firebase/app';
+import { app } from '../firebase-config.js';
 import { setAuthToken, api } from '../api.js';
 import { uploadImage } from '../modules/submitForm.js';
 
-const auth = getAuth(getApp());
+const auth = getAuth(app);
 
 const loginView = document.getElementById('login-view');
 const dashboardView = document.getElementById('dashboard-view');

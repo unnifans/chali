@@ -339,7 +339,7 @@ async function handleUpdateJoke(request, path, env) {
 }
 
 async function handleSetStatus(request, path, env) {
-  const id = decodeURIComponent(path.split('/')[3]);
+  const id = decodeURIComponent(path.split('/')[4]);
   const body = await readJson(request);
 
   if (!['active', 'quarantine', 'deleted'].includes(body.status)) {
