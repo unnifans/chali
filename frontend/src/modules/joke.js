@@ -2,26 +2,24 @@ import { api } from '../api.js';
 
 // Read-efficient joke fetcher across the Chali API.
 //
-// The Worker serves exactly ONE active joke per request (a random-walk over a
-// SQLite (status, rand) index), instead of pulling the whole pool like the old
-// Firestore approach. A local cursor (last { rand, id }) walks forward and the
-// worker wraps when it reaches the end; a small "recently shown" set keeps
-// repeats out of any given session.
+// The Worker serves exactly ONE random active joke per request (ORDER BY
+// RANDOM() in SQLite), so there is no shared ordering for devices to converge
+// on. The local "recently shown" set keeps repeats out of any given session —
+// if the Worker returns one, we simply draw again (each draw is one cheap row).
 
 const MAX_WALK_ATTEMPTS = 8;
 const RECENT_LIMIT = 40;
 
-let cursor = null;
 const recentShown = new Set();
 let lastShownId = null;
 let currentJoke = null;
 
 export async function fetchRandomJoke() {
-  // Random-walk: each iteration costs exactly one API call / one row.
+  // Random draw: each iteration costs exactly one API call / one row.
   for (let attempt = 0; attempt < MAX_WALK_ATTEMPTS; attempt++) {
     let joke;
     try {
-      const res = await api.getNextJoke(cursor);
+      const res = await api.getNextJoke();
       joke = res && res.joke ? res.joke : null;
     } catch (err) {
       console.error('Failed to fetch joke:', err);
@@ -30,10 +28,8 @@ export async function fetchRandomJoke() {
 
     if (!joke) break;
 
-    cursor = { rand: joke.rand ?? 0, id: joke.id };
-
     if (joke.id === lastShownId || recentShown.has(joke.id)) {
-      continue; // shown recently — the next step walks past it
+      continue; // shown recently — draw again
     }
 
     recordShown(joke);

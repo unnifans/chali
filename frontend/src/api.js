@@ -49,10 +49,7 @@ async function request(path, { method = 'GET', body, params, admin = false } = {
 // ---------- Public ----------
 
 export const api = {
-  getNextJoke: (cursor) =>
-    request('/api/jokes/next', {
-      params: cursor ? { cursorRand: cursor.rand, cursorId: cursor.id } : {},
-    }),
+  getNextJoke: () => request('/api/jokes/next'),
 
   getMemes: (tag) => request('/api/memes', { params: { tag } }),
 

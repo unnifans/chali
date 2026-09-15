@@ -137,47 +137,21 @@ function mapMemeRow(r) {
 // Public endpoints
 // ---------------------------------------------------------------------------
 
-// Random-walk in SQL: serve exactly ONE active joke per request.
-// cursor = { rand, id } of the last served joke; the worker walks the
-// (status, rand, id) ordering and wraps when it runs past the end.
+// Serve a RANDOM active joke per request. SQLite's RANDOM() gives every device
+// an independent draw with no shared ordering, so the pool never appears in any
+// global sequence (a forward walk through ORDER BY rand would make all devices
+// converge on the same order). The active pool is small, so the sort behind
+// ORDER BY RANDOM() is cheap. Repetition-avoidance is handled client-side via
+// the "recently shown" set.
 async function handleNextJoke(url, env) {
-  const cursorRand = url.searchParams.get('cursorRand');
-  const cursorId = url.searchParams.get('cursorId');
+  const row = await env.DB.prepare(
+    `SELECT * FROM jokes
+       WHERE status = 'active'
+       ORDER BY RANDOM()
+       LIMIT 1`
+  ).first();
 
-  let rows;
-  if (cursorRand !== null) {
-    const r = Number(cursorRand);
-    const id = String(cursorId || '');
-    rows = await env.DB.prepare(
-      `SELECT * FROM jokes
-         WHERE status = 'active'
-           AND (rand > ? OR (rand = ? AND id > ?))
-         ORDER BY rand, id
-         LIMIT 1`
-    ).bind(r, r, id).all();
-  } else {
-    rows = await env.DB.prepare(
-      `SELECT * FROM jokes
-         WHERE status = 'active'
-         ORDER BY rand, id
-         LIMIT 1`
-    ).all();
-  }
-
-  let joke = rows.results[0] || null;
-
-  // Walked past the highest rand — wrap back to the start of the pool.
-  if (!joke && cursorRand !== null) {
-    const wrapped = await env.DB.prepare(
-      `SELECT * FROM jokes
-         WHERE status = 'active'
-         ORDER BY rand, id
-         LIMIT 1`
-    ).all();
-    joke = wrapped.results[0] || null;
-  }
-
-  return json({ joke: joke ? mapJokeRow(joke) : null });
+  return json({ joke: row ? mapJokeRow(row) : null });
 }
 
 async function handleMemes(url, env) {
