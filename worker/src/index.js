@@ -137,19 +137,44 @@ function mapMemeRow(r) {
 // Public endpoints
 // ---------------------------------------------------------------------------
 
-// Serve a RANDOM active joke per request. SQLite's RANDOM() gives every device
-// an independent draw with no shared ordering, so the pool never appears in any
-// global sequence (a forward walk through ORDER BY rand would make all devices
-// converge on the same order). The active pool is small, so the sort behind
-// ORDER BY RANDOM() is cheap. Repetition-avoidance is handled client-side via
-// the "recently shown" set.
+// Serve a RANDOM active joke per request while reading only a handful of rows.
+//
+// Draw: pick a random seq in [MIN(seq), MAX(seq)] of active jokes and seek
+// that exact seq through the (status, seq) index (~1-2 rows read). A miss only
+// happens when the sampled slot holds a deleted/quarantined joke, so we re-roll
+// (tiny index seeks). The forward seek from a random point is the guaranteed
+// fallback, because MAX(seq) is itself active. Every active joke has equal
+// probability, and there is no shared ordering for devices to converge on.
+//
+// This replaces ORDER BY RANDOM(), which scanned the entire active pool
+// (~2.7k rows) per request and exhausted the D1 free-plan daily rows-read quota.
 async function handleNextJoke(url, env) {
+  const { lo, hi } = await env.DB.prepare(
+    `SELECT
+       (SELECT MIN(seq) FROM jokes WHERE status = 'active') AS lo,
+       (SELECT MAX(seq) FROM jokes WHERE status = 'active') AS hi`
+  ).first();
+
+  if (lo == null) return json({ joke: null });
+
+  const range = hi - lo + 1;
+  const pick = () => lo + Math.floor(Math.random() * range);
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const row = await env.DB.prepare(
+      `SELECT * FROM jokes
+         WHERE status = 'active' AND seq = ?
+         LIMIT 1`
+    ).bind(pick()).first();
+    if (row) return json({ joke: mapJokeRow(row) });
+  }
+
   const row = await env.DB.prepare(
     `SELECT * FROM jokes
-       WHERE status = 'active'
-       ORDER BY RANDOM()
+       WHERE status = 'active' AND seq >= ?
+       ORDER BY seq ASC
        LIMIT 1`
-  ).first();
+  ).bind(pick()).first();
 
   return json({ joke: row ? mapJokeRow(row) : null });
 }
@@ -236,8 +261,9 @@ async function handleSubmit(request, env) {
   await env.DB.prepare(
     `INSERT INTO jokes
        (id, type, question, answer, image_url, image_public_id,
-        upvotes, downvotes, status, submitted_by, rand, timestamp, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'quarantine', 'anonymous', NULL, ?, ?)`
+        upvotes, downvotes, status, submitted_by, rand, seq, timestamp, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'quarantine', 'anonymous', NULL,
+             (SELECT COALESCE(MAX(seq), 0) + 1 FROM jokes), ?, ?)`
   ).bind(id, type, q, a, img, pid, ORIGINAL_START_SCORE, 0, now, now).run();
 
   return json({ id }, 201);
@@ -284,8 +310,9 @@ async function handleCreateJoke(request, env) {
   await env.DB.prepare(
     `INSERT INTO jokes
        (id, type, question, answer, image_url, image_public_id,
-        upvotes, downvotes, status, submitted_by, rand, timestamp, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'admin', ?, ?, ?)`
+        upvotes, downvotes, status, submitted_by, rand, seq, timestamp, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'admin', ?,
+             (SELECT COALESCE(MAX(seq), 0) + 1 FROM jokes), ?, ?)`
   ).bind(id, type, q, a, img, pid, ORIGINAL_START_SCORE, 0, st, rand, now, now).run();
 
   return json({ id }, 201);
