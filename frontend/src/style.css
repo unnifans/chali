@@ -75,7 +75,10 @@ body::after {
     margin: 22px 0 0 0;
 }
 
-.ad-slot ins.adsbygoogle {
+.ad-slot > div {
+    width: 100%;
+    max-width: 728px;
+    min-height: 45px;
     border-radius: 10px;
     overflow: hidden;
 }
