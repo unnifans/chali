@@ -174,7 +174,11 @@ export function updateVoteScore(joke) {
 }
 
 function toCloudinaryUrl(url, width) {
-  return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
+  if (!url || typeof url !== 'string') return '';
+  if (url.includes('/upload/') && !url.includes('/upload/f_auto')) {
+    return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
+  }
+  return url;
 }
 
 function escapeHtml(str) {

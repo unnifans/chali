@@ -176,7 +176,7 @@ function renderList(jokes) {
         </p>
         ${joke.answer ? `<p class="muted">A: ${escapeHtml(joke.answer)}</p>` : ''}
         <p class="muted">Score: ${joke.upvotes - joke.downvotes} (↑${joke.upvotes} ↓${joke.downvotes})</p>
-        ${joke.imageUrl ? `<img class="queue-item-thumb" src="${joke.imageUrl}" alt="" />` : ''}
+        ${joke.imageUrl ? `<img class="queue-item-thumb" src="${toCloudinaryThumbUrl(joke.imageUrl)}" alt="" />` : ''}
         <div class="queue-actions">
           ${joke.status === 'quarantine' ? `<button class="btn-approve" data-id="${joke.id}">Approve</button>` : ''}
           ${joke.status !== 'deleted' ? `<button class="btn-delete" data-id="${joke.id}">Delete</button>` : ''}
@@ -324,6 +324,14 @@ form.addEventListener('submit', async (e) => {
 });
 
 // ---------- Helpers ----------
+
+function toCloudinaryThumbUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  if (url.includes('/upload/') && !url.includes('/upload/f_auto')) {
+    return url.replace('/upload/', '/upload/f_auto,q_auto,w_220/');
+  }
+  return url;
+}
 
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
