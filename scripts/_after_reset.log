@@ -1,0 +1,8 @@
+[2026-09-22 12:26:18] start (attempts=4, sleep=60 s)
+[2026-09-22 12:26:18] attempt 1 of 4
+[2026-09-22 12:26:19] > npm run migrate:d1
+[2026-09-22 12:27:11] > importing memes (insert_memes.sql)
+[2026-09-22 12:27:40] > npm run deploy:worker
+[2026-09-22 12:28:14] > smoke: GET /api/jokes/next
+[2026-09-22 12:28:16] smoke status: 200
+[2026-09-22 12:28:16] done
