@@ -4,4 +4,7 @@
 /mod          /admin.html   200
 /mod/         /admin.html   200
 /mod/*        /admin.html   200
+/editor       /admin.html   200
+/editor/      /admin.html   200
+/editor/*     /admin.html   200
 /*            /index.html   200
