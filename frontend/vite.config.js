@@ -53,7 +53,7 @@ export default defineConfig({
       workbox: {
         // Since you have multiple pages, we need to handle navigation properly
         navigateFallback: './index.html',
-        navigateFallbackDenylist: [/^\/_/, /^\/admin/, /^\/admin\.html$/], // Exclude admin page from fallback
+        navigateFallbackDenylist: [/^\/_/, /^\/admin/, /^\/admin\.html$/, /^\/mod/, /^\/mod\.html$/], // Exclude admin page from fallback
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
