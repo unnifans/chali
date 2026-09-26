@@ -64,7 +64,7 @@ export const api = {
 
   // ---------- Admin (Firebase token attached) ----------
 
-  adminList: (status) => request('/api/admin/jokes', { params: { status }, admin: true }),
+  adminList: (opts = {}) => request('/api/admin/jokes', { params: opts, admin: true }),
   adminCreate: (payload) => request('/api/admin/jokes', { method: 'POST', body: payload, admin: true }),
   adminUpdate: (id, payload) => request(`/api/admin/jokes/${encodeURIComponent(id)}`, { method: 'PUT', body: payload, admin: true }),
   adminSetStatus: (id, status) => request(`/api/admin/jokes/${encodeURIComponent(id)}/status`, { method: 'POST', body: { status }, admin: true }),

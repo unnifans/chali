@@ -25,40 +25,71 @@
 
   <div id="dashboard-view" class="hidden">
     <header class="admin-header">
-      <h1>Joke Moderation</h1>
-      <button id="logout-btn">Log out</button>
+      <div class="brand">
+        <h1>Chali Mod Console</h1>
+        <span id="review-position" class="brand-sub">—</span>
+      </div>
+      <div class="header-actions">
+        <input id="search-input" type="search" placeholder="Search jokes…  ( / )" autocomplete="off" />
+        <div class="mode-switch" id="mode-switch">
+          <button id="mode-review" class="mode-btn active">Review</button>
+          <button id="mode-list" class="mode-btn">List</button>
+        </div>
+        <button id="new-joke-btn" class="btn-accent">+ New</button>
+        <button id="logout-btn">Log out</button>
+      </div>
     </header>
 
-    <div class="stats-row">
-      <div class="stat-card">
-        <span class="stat-value" id="stat-total">-</span>
-        <span class="stat-label">Total Jokes</span>
-      </div>
-      <div class="stat-card">
+    <div class="stats-row" id="stats-row">
+      <button class="stat-card" data-status="quarantine" title="Click to filter">
+        <span class="stat-value" id="stat-quarantine">-</span>
+        <span class="stat-label">To Review</span>
+      </button>
+      <button class="stat-card" data-status="active" title="Click to filter">
         <span class="stat-value" id="stat-active">-</span>
         <span class="stat-label">Active</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value" id="stat-quarantine">-</span>
-        <span class="stat-label">Quarantine</span>
-      </div>
-      <div class="stat-card">
+      </button>
+      <button class="stat-card" data-status="deleted" title="Click to filter">
         <span class="stat-value" id="stat-deleted">-</span>
         <span class="stat-label">Deleted</span>
-      </div>
+      </button>
+      <button class="stat-card" data-status="all" title="Click to filter">
+        <span class="stat-value" id="stat-total">-</span>
+        <span class="stat-label">Total</span>
+      </button>
     </div>
 
-<div class="toolbar">
-      <div class="tabs" id="status-tabs">
-        <button class="tab active" data-status="quarantine">Quarantine</button>
-        <button class="tab" data-status="active">Active</button>
-        <button class="tab" data-status="deleted">Deleted</button>
-        <button class="tab" data-status="all">All</button>
-      </div>
-      <button id="new-joke-btn" class="btn-accent">+ New Joke</button>
-      </div>
+    <div class="filter-pills" id="filter-pills">
+      <button class="pill active" data-status="quarantine">Quarantine</button>
+      <button class="pill" data-status="active">Active</button>
+      <button class="pill" data-status="deleted">Deleted</button>
+      <button class="pill" data-status="all">All</button>
+    </div>
 
-      <div id="bulk-bar" class="admin-card bulk-bar hidden">
+    <!-- REVIEW MODE -->
+    <section id="review-panel" class="hidden">
+      <div class="review-toolbar">
+        <div class="progress"><div id="review-progress" class="progress-bar"></div></div>
+        <span id="review-queue-label">Loading…</span>
+      </div>
+      <div id="review-card" class="review-card">
+        <p class="review-empty">Nothing to review here. Nice!</p>
+      </div>
+      <div class="review-actions">
+        <button id="review-skip" class="act-skip show-key" data-key="→">Skip</button>
+        <button id="review-approve" class="act-approve show-key" data-key="A">Approve</button>
+        <button id="review-delete" class="act-delete show-key" data-key="D">Delete</button>
+        <button id="review-edit" class="act-edit show-key" data-key="E">Edit</button>
+      </div>
+      <p class="review-help">
+        <span>A</span> Approve · <span>D</span> Delete · <span>E</span> Edit ·
+        <span>→</span> Skip · <span>Ctrl+Z</span> Undo
+      </p>
+    </section>
+
+    <!-- LIST MODE -->
+    <section id="list-panel">
+      <div id="bulk-bar" class="bulk-bar hidden">
         <label class="bulk-select">
           <input type="checkbox" id="select-all-check" />
           <span>Select all</span>
@@ -69,45 +100,56 @@
           <button id="bulk-delete-btn" class="btn-delete" disabled>Delete (0)</button>
         </div>
       </div>
-
-    <!-- Create / Edit form - shared, toggled between the two modes -->
-    <form id="joke-form" class="admin-card joke-form hidden">
-      <h2 id="joke-form-title">New Joke</h2>
-      <input type="hidden" id="joke-form-id" />
-
-      <label>Type</label>
-      <select id="joke-form-type">
-        <option value="single">Single Joke</option>
-        <option value="qna">Question &amp; Answer</option>
-      </select>
-
-      <label>Question / Joke text</label>
-      <textarea id="joke-form-question" maxlength="1000" required></textarea>
-
-      <label id="joke-form-answer-label" class="hidden">Answer</label>
-      <textarea id="joke-form-answer" class="hidden" maxlength="1000"></textarea>
-
-      <label>Status</label>
-      <select id="joke-form-status">
-        <option value="active">active</option>
-        <option value="quarantine">quarantine</option>
-        <option value="deleted">deleted</option>
-      </select>
-
-      <label>Replace image (optional)</label>
-      <input type="file" id="joke-form-image" accept="image/png,image/jpeg,image/webp" />
-
-      <div class="joke-form-actions">
-        <button type="submit" class="btn-accent">Save</button>
-        <button type="button" id="joke-form-cancel">Cancel</button>
+      <div id="queue-root" class="list-root">
+        <p>Loading…</p>
       </div>
-      <p id="joke-form-status-msg"></p>
-    </form>
+      <div class="list-nav">
+        <button id="prev-page" disabled>← Prev</button>
+        <span id="page-info"></span>
+        <button id="next-page" disabled>Next →</button>
+      </div>
+    </section>
 
-    <h2 id="list-title">Quarantine Queue</h2>
-    <div id="queue-root">
-      <p>Loading...</p>
+    <!-- Create / Edit modal -->
+    <div id="edit-modal" class="modal hidden">
+      <form id="joke-form" class="admin-card joke-form">
+        <div class="modal-head">
+          <h2 id="joke-form-title">New Joke</h2>
+          <button type="button" id="joke-form-cancel" class="modal-x" aria-label="Close">×</button>
+        </div>
+        <input type="hidden" id="joke-form-id" />
+
+        <label>Type</label>
+        <select id="joke-form-type">
+          <option value="single">Single Joke</option>
+          <option value="qna">Question &amp; Answer</option>
+        </select>
+
+        <label>Question / Joke text</label>
+        <textarea id="joke-form-question" maxlength="1000" required></textarea>
+
+        <label id="joke-form-answer-label" class="hidden">Answer</label>
+        <textarea id="joke-form-answer" class="hidden" maxlength="1000"></textarea>
+
+        <label>Status</label>
+        <select id="joke-form-status">
+          <option value="active">active</option>
+          <option value="quarantine">quarantine</option>
+          <option value="deleted">deleted</option>
+        </select>
+
+        <label>Replace image (optional)</label>
+        <input type="file" id="joke-form-image" accept="image/png,image/jpeg,image/webp" />
+
+        <div class="joke-form-actions">
+          <button type="submit" class="btn-accent">Save</button>
+          <button type="button" id="joke-form-cancel-btn" class="btn-ghost">Cancel</button>
+        </div>
+        <p id="joke-form-status-msg"></p>
+      </form>
     </div>
+
+    <div id="toast" class="toast hidden"></div>
   </div>
 
   <script type="module" src="/src/admin/admin.js"></script>
