@@ -8,3 +8,4 @@ firebase-debug.log
 firebase-debug.*.log
 .firebase/
 scripts/service-account.json
+scripts/_meme_url_updates.sql
