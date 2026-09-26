@@ -7,4 +7,7 @@
 /editor       /admin.html   200
 /editor/      /admin.html   200
 /editor/*     /admin.html   200
+/chalis       /chalis.html   200
+/chalis/      /chalis.html   200
+/chalis/*     /chalis.html   200
 /*            /index.html   200
