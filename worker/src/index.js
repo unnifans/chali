@@ -406,17 +406,29 @@ async function handleListJokes(url, env) {
   const allowed = new Set(['all', 'active', 'quarantine', 'deleted']);
   if (!allowed.has(status)) throw new HttpError(400, 'Invalid status filter');
 
-  let rows;
-  if (status === 'all') {
-    rows = await env.DB.prepare(
-      `SELECT * FROM jokes ORDER BY timestamp DESC, id DESC LIMIT 5000`
-    ).all();
-  } else {
-    rows = await env.DB.prepare(
-      `SELECT * FROM jokes WHERE status = ? ORDER BY timestamp DESC, id DESC LIMIT 5000`
-    ).bind(status).all();
+  const q = (url.searchParams.get('q') || '').trim();
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit'), 10) || 100, 1), 500);
+  const offset = Math.max(parseInt(url.searchParams.get('offset'), 10) || 0, 0);
+
+  const where = [];
+  const params = [];
+  if (status !== 'all') { where.push('status = ?'); params.push(status); }
+  if (q) {
+    where.push('(question LIKE ? OR answer LIKE ?)');
+    const like = `%${q}%`;
+    params.push(like, like);
   }
-  return json({ jokes: rows.results.map(mapJokeRow) });
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const total = (await env.DB.prepare(
+    `SELECT COUNT(*) AS c FROM jokes ${whereSql}`
+  ).bind(...params).first()).c;
+
+  const rows = await env.DB.prepare(
+    `SELECT * FROM jokes ${whereSql} ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?`
+  ).bind(...params, limit, offset).all();
+
+  return json({ jokes: rows.results.map(mapJokeRow), total });
 }
 
 async function handleCreateJoke(request, env) {
