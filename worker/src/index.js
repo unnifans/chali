@@ -36,6 +36,8 @@ export default {
         res = await handleVote(request, env);
       } else if (path === '/api/submit' && request.method === 'POST') {
         res = await handleSubmit(request, env);
+      } else if (path === '/api/uploads/presign' && request.method === 'POST') {
+        res = await handlePresign(request, env);
       } else if (path === '/api/admin/jokes' && request.method === 'GET') {
         res = await requireAdmin(request, env).then((p) => handleListJokes(url, env));
       } else if (path === '/api/admin/jokes' && request.method === 'POST') {
@@ -102,13 +104,25 @@ async function requireAdmin(request, env) {
   return payload;
 }
 
+function isCloudinaryUrl(url) {
+  return typeof url === 'string' && url.includes('res.cloudinary.com');
+}
+
+// Cloudinary is decommissioned (account disabled). Any image URL pointing at it
+// must be treated as "no image" — never served, never stored.
+function sanitizeImageUrl(url) {
+  if (typeof url !== 'string' || !url.startsWith('https://')) return null;
+  if (isCloudinaryUrl(url)) return null;
+  return url;
+}
+
 function mapJokeRow(r) {
   return {
     id: r.id,
     type: r.type,
     question: r.question,
     answer: r.answer,
-    imageUrl: r.image_url,
+    imageUrl: sanitizeImageUrl(r.image_url),
     imagePublicId: r.image_public_id,
     upvotes: r.upvotes,
     downvotes: r.downvotes,
@@ -251,7 +265,7 @@ async function handleSubmit(request, env) {
     if (typeof imageUrl !== 'string' || !imageUrl.startsWith('https://')) {
       throw new HttpError(400, 'imageUrl must be an https URL or null');
     }
-    img = imageUrl;
+    img = sanitizeImageUrl(imageUrl);
   }
   const pid = typeof imagePublicId === 'string' || imagePublicId === null ? imagePublicId : null;
 
@@ -267,6 +281,120 @@ async function handleSubmit(request, env) {
   ).bind(id, type, q, a, img, pid, ORIGINAL_START_SCORE, 0, now, now).run();
 
   return json({ id }, 201);
+}
+
+// ---------------------------------------------------------------------------
+// R2 image uploads (presigned PUT)
+//
+// The client POSTs { filename, contentType, size } and receives a 5-minute
+// SigV4-presigned PUT URL for a fresh `jokes/<uuid>.<ext>` object plus the
+// public URL to store on the row. The browser PUTs the file straight to R2,
+// then submits the joke with `imageUrl = finalUrl`. Content-Length is signed so
+// R2 rejects anything larger than the size we capped at issuance time.
+// ---------------------------------------------------------------------------
+
+const R2_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function extForContentType(contentType, filename) {
+  const map = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/avif': 'avif',
+  };
+  if (map[contentType]) return map[contentType];
+  const fromName = /\.([a-z0-9]{2,5})$/i.exec(filename || '');
+  return fromName ? fromName[1].toLowerCase() : 'bin';
+}
+
+async function hmac(keyBytes, data) {
+  const key = await crypto.subtle.importKey(
+    'raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
+}
+
+async function sha256Hex(data) {
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function presignR2Put(env, key, contentType, contentLength, expiresSec = 300) {
+  const endpoint = String(env.R2_ENDPOINT || '').replace(/\/$/, '');
+  const { R2_BUCKET: bucket, R2_ACCESS_KEY_ID: accessKey, R2_SECRET_ACCESS_KEY: secret } = env;
+  if (!endpoint || !bucket || !accessKey || !secret) {
+    throw new HttpError(500, 'R2 is not configured');
+  }
+
+  // R2's S3 API is virtual-hosted: https://<bucket>.<account>.r2.cloudflarestorage.com/<key>
+  const accountHost = new URL(endpoint).host;
+  const host = `${bucket}.${accountHost}`;
+  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const datestamp = amzDate.slice(0, 8);
+  const scope = `${datestamp}/auto/s3/aws4_request`;
+  const payloadHash = 'UNSIGNED-PAYLOAD';
+  const signedHeaders = 'content-length;host';
+
+  const encodedKey = key.split('/').map((seg) =>
+    encodeURIComponent(seg).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())
+  ).join('/');
+
+  const canonicalQuery = [
+    'X-Amz-Algorithm=AWS4-HMAC-SHA256',
+    `X-Amz-Credential=${encodeURIComponent(`${accessKey}/${scope}`).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())}`,
+    `X-Amz-Date=${amzDate}`,
+    `X-Amz-Expires=${expiresSec}`,
+    `X-Amz-SignedHeaders=${encodeURIComponent(signedHeaders)}`,
+  ].join('&');
+
+  const canonicalHeaders =
+    `content-length:${contentLength}\n` +
+    `host:${host}\n`;
+
+  const canonicalRequest = [
+    'PUT',
+    `/${encodedKey}`,
+    canonicalQuery,
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n');
+
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    scope,
+    await sha256Hex(new TextEncoder().encode(canonicalRequest)),
+  ].join('\n');
+
+  const kSecret = new TextEncoder().encode('AWS4' + secret);
+  const kDate = await hmac(kSecret, new TextEncoder().encode(datestamp));
+  const kRegion = await hmac(kDate, new TextEncoder().encode('auto'));
+  const kService = await hmac(kRegion, new TextEncoder().encode('s3'));
+  const kSigning = await hmac(kService, new TextEncoder().encode('aws4_request'));
+  const signature = [...await hmac(kSigning, new TextEncoder().encode(stringToSign))]
+    .map((b) => b.toString(16).padStart(2, '0')).join('');
+
+  return `https://${host}/${encodedKey}?${canonicalQuery}&X-Amz-Signature=${signature}`;
+}
+
+async function handlePresign(request, env) {
+  const body = await readJson(request);
+  const { filename, contentType, size } = body || {};
+
+  if (typeof size !== 'number' || !(size > 0)) throw new HttpError(400, 'size is required');
+  if (size > R2_MAX_IMAGE_BYTES) throw new HttpError(400, 'Image must be under 5MB');
+  if (typeof contentType !== 'string' || !contentType.startsWith('image/')) {
+    throw new HttpError(400, 'contentType must be an image');
+  }
+
+  const key = `jokes/${crypto.randomUUID()}.${extForContentType(contentType, filename)}`;
+  const base = String(env.R2_PUBLIC_BASE || '').replace(/\/$/, '');
+  const finalUrl = `${base}/${key}`;
+  const url = await presignR2Put(env, key, contentType, size, 300);
+
+  return json({ url, finalUrl, key });
 }
 
 // ---------------------------------------------------------------------------
@@ -300,7 +428,7 @@ async function handleCreateJoke(request, env) {
   if (!q) throw new HttpError(400, 'Joke text is required');
   const a = type === 'qna' ? str(answer, 1000) : null;
   const st = ['active', 'quarantine', 'deleted'].includes(status) ? status : 'active';
-  const img = typeof imageUrl === 'string' && imageUrl.startsWith('https://') ? imageUrl : null;
+  const img = sanitizeImageUrl(imageUrl);
   const pid = typeof imagePublicId === 'string' ? imagePublicId : null;
   const rand = st === 'active' ? Math.random() : null;
 
@@ -342,7 +470,7 @@ async function handleUpdateJoke(request, path, env) {
   }
 
   if (body.imageUrl !== undefined) {
-    const img = typeof body.imageUrl === 'string' && body.imageUrl.startsWith('https://') ? body.imageUrl : null;
+    const img = sanitizeImageUrl(body.imageUrl);
     sets.push('image_url = ?'); params.push(img);
   }
   if (body.imagePublicId !== undefined) {

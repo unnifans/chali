@@ -6,7 +6,10 @@
 
   "vars": {
     "FIREBASE_PROJECT_ID": "jokeymalayalam",
-    "ADMIN_EMAILS": "wastedev2005@gmail.com"
+    "ADMIN_EMAILS": "wastedev2005@gmail.com",
+    "R2_PUBLIC_BASE": "https://media.chali.in",
+    "R2_BUCKET": "chali-media",
+    "R2_ENDPOINT": "https://651f4958bb094320a3996df260927043.r2.cloudflarestorage.com"
   },
 
   "d1_databases": [

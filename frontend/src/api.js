@@ -59,6 +59,9 @@ export const api = {
   submitJoke: (payload) =>
     request('/api/submit', { method: 'POST', body: payload }),
 
+  requestPresign: (payload) =>
+    request('/api/uploads/presign', { method: 'POST', body: payload }),
+
   // ---------- Admin (Firebase token attached) ----------
 
   adminList: (status) => request('/api/admin/jokes', { params: { status }, admin: true }),

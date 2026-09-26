@@ -1,9 +1,9 @@
 import { api } from '../api.js';
 
-// Uploads an image via the future R2 presign flow.
-// NOTE: The Worker presign endpoint (/api/uploads) is part of the R2 migration
-// and is not wired up yet — until it lands, image uploads are deferred and the
-// submit still succeeds with no image.
+// Uploads an image to R2: asks the Worker for a presigned PUT URL, streams the
+// file straight to the bucket, and returns the public media.chali.in URL that
+// should be stored on the joke row. Requires the R2 bucket's CORS policy to
+// allow PUTs from the app origin.
 export async function uploadImage(file) {
   if (!file) return { imageUrl: null, imagePublicId: null };
 
@@ -15,9 +15,20 @@ export async function uploadImage(file) {
     throw new Error('File must be an image');
   }
 
-  // TODO(R2): call Worker /api/uploads to get a presigned PUT URL, upload the
-  // file, and return the public URL. For now images are dropped.
-  return { imageUrl: null, imagePublicId: null };
+  const { url, finalUrl } = await api.requestPresign({
+    filename: file.name || 'image',
+    contentType: file.type,
+    size: file.size,
+  });
+
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+  if (!res.ok) throw new Error('Image upload failed');
+
+  return { imageUrl: finalUrl, imagePublicId: null };
 }
 
 export function initSubmitForm() {
