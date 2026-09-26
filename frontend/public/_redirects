@@ -10,4 +10,6 @@
 /chalis       /chalis.html   200
 /chalis/      /chalis.html   200
 /chalis/*     /chalis.html   200
+/j            /index.html   200
+/j/*          /index.html   200
 /*            /index.html   200

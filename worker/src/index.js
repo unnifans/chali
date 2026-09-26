@@ -30,6 +30,10 @@ export default {
       let res;
       if (path === '/api/jokes/next' && request.method === 'GET') {
         res = await handleNextJoke(url, env);
+      } else if (/^\/api\/jokes\/[^/]+$/.test(path) && request.method === 'GET') {
+        res = await handleGetJoke(path, env);
+      } else if (/^\/j\/[^/]+$/.test(path) && request.method === 'GET') {
+        res = await handleSharePage(path, request, env);
       } else if (path === '/api/memes' && request.method === 'GET') {
         res = await handleMemes(url, env);
       } else if (path === '/api/votes' && request.method === 'POST') {
@@ -191,6 +195,99 @@ async function handleNextJoke(url, env) {
   ).bind(pick()).first();
 
   return json({ joke: row ? mapJokeRow(row) : null });
+}
+
+async function handleGetJoke(path, env) {
+  // Serve ONE active joke by id — backs shared deep links (/j/<id>).
+  // Single-row point lookup, no table scans.
+  const id = decodeURIComponent(path.slice('/api/jokes/'.length));
+  if (!id) throw new HttpError(400, 'Missing joke id');
+  const row = await env.DB.prepare(
+    `SELECT * FROM jokes WHERE id = ? LIMIT 1`
+  ).bind(id).first();
+  if (!row || row.status !== 'active') throw new HttpError(404, 'Joke not available');
+  return json({ joke: mapJokeRow(row) });
+}
+
+// Share page for deep links (/j/<id>).
+//
+// Messaging apps (WhatsApp, Telegram, Instagram DMs) unfurl a link by
+// fetching its HTML and reading only the static og:* meta tags — they never
+// run the SPA's JavaScript. So this route serves a tiny HTML page carrying
+// per-joke OG tags (like an Amazon product page does), fetched with a single
+// indexed D1 row read. Human visitors are bounced straight into the app;
+// bots/proxies may cache the card (Cache-Control) so repeat unfurls are free.
+const APP_BASE = 'https://chali.in';
+const FALLBACK_OG_IMAGE = 'https://chali.in/og-1200x630.png';
+
+function escHtmlAttr(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function truncOneLine(value, max) {
+  const flat = String(value ?? '').replace(/\s+/g, ' ').trim();
+  return flat.length > max ? flat.slice(0, max - 1) + '…' : flat;
+}
+
+async function handleSharePage(path, request, env) {
+  const id = decodeURIComponent(path.slice('/j/'.length));
+  const host = new URL(request.url).host;
+  const pageUrl = `https://${host}/j/${encodeURIComponent(id)}`;
+
+  let title = 'Chali — Malayalam Joke App';
+  let desc = 'Read, vote and share the best Malayalam chali jokes.';
+  let image = FALLBACK_OG_IMAGE;
+  let appUrl = `${APP_BASE}/`;
+
+  if (id) {
+    const row = await env.DB.prepare(
+      `SELECT * FROM jokes WHERE id = ? LIMIT 1`
+    ).bind(id).first();
+    if (row && row.status === 'active') {
+      title = truncOneLine(row.question, 180) || title;
+      // The answer is never exposed in previews — it only reveals on the site.
+      desc = (row.type === 'qna' && row.answer)
+        ? '🤔 This joke has a hidden answer — tap to reveal it on Chali.'
+        : '😂 — shared from Chali. Tap to read & vote.';
+      const img = sanitizeImageUrl(row.image_url);
+      if (img) image = img;
+      appUrl = `${APP_BASE}/j/${encodeURIComponent(row.id)}`;
+    }
+  }
+
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>${escHtmlAttr(title)}</title>
+<meta name="description" content="${escHtmlAttr(desc)}" />
+<link rel="canonical" href="${escHtmlAttr(appUrl)}" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Chali" />
+<meta property="og:url" content="${escHtmlAttr(pageUrl)}" />
+<meta property="og:title" content="${escHtmlAttr(title)}" />
+<meta property="og:description" content="${escHtmlAttr(desc)}" />
+<meta property="og:image" content="${escHtmlAttr(image)}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="${escHtmlAttr(title)}" />
+<meta name="twitter:description" content="${escHtmlAttr(desc)}" />
+<meta name="twitter:image" content="${escHtmlAttr(image)}" />
+<meta http-equiv="refresh" content="0;url=${escHtmlAttr(appUrl)}" />
+</head>
+<body>
+<p>Opening this joke in Chali… <a href="${escHtmlAttr(appUrl)}">Tap here if you are not redirected</a>.</p>
+<script>location.replace(${JSON.stringify(appUrl)});</script>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
+  });
 }
 
 async function handleMemes(url, env) {

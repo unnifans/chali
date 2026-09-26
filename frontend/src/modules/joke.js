@@ -46,6 +46,28 @@ export function startPrefetch() {
     });
 }
 
+// Fetch ONE joke by id — backs shared deep links (/j/<id>). Costs one
+// point lookup; never touches the random/prefetch pipeline directly.
+export async function fetchJokeById(id) {
+  if (!id) return null;
+  try {
+    const res = await api.getJokeById(id);
+    return res && res.joke ? res.joke : null;
+  } catch (err) {
+    console.error('Failed to fetch joke by id:', err);
+    return null;
+  }
+}
+
+// Adopt an externally-loaded joke (shared deep link) into the session:
+// marks it shown so the random walk won't repeat it immediately, and keeps
+// the prefetch pipeline full for the next swipe.
+export function adoptJoke(joke) {
+  if (!joke) return null;
+  recordShown(joke);
+  return joke;
+}
+
 export async function fetchRandomJoke() {
   // Random draw: use the prefetched joke when available, else draw live.
   // Each draw costs exactly one API call / one row.

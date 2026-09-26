@@ -1,6 +1,6 @@
 import './firebase-config.js';
 import {
-  fetchRandomJoke, renderJoke, updateVoteScore, applyVoteResult, getCurrentJoke, startPrefetch
+  fetchRandomJoke, fetchJokeById, adoptJoke, renderJoke, updateVoteScore, applyVoteResult, getCurrentJoke, startPrefetch
 } from './modules/joke.js';
 import { castVote, showToast } from './modules/vote.js';
 import { hasVoted, markVoted, unmarkVoted, getVoteDirection } from './modules/voteCache.js';
@@ -11,10 +11,12 @@ import {
 } from './modules/meme.js';
 import { initCardSwipe, flyOutAndTriggerNext, flyOutAndTriggerPrev, triggerSwipeHint, isCardOverflowingViewport } from './modules/swipe.js';
 import { triggerEmojiBurst } from './modules/particles.js';
+import { initShare, parseSharedJokeId, updateShareUrl } from './modules/share.js';
 
 const upBtn = document.getElementById('upvote-btn');
 const downBtn = document.getElementById('downvote-btn');
 const nextBtn = document.getElementById('next-btn');
+const shareBtn = document.getElementById('share-btn');
 const votePill = document.querySelector('.vote-pill');
 const submitBtn = document.getElementById('show-submit-btn');
 const jokeCard = document.querySelector('.joke-card');
@@ -46,8 +48,7 @@ function showPreviousJoke() {
     const joke = jokeHistory[currentHistoryIndex];
     showCardControls();
     isShowingMeme = false;
-    renderJoke(joke);
-    reflectVoteState(joke);
+    showJokeCard(joke);
     startPrefetch();
     return;
   }
@@ -61,8 +62,7 @@ function showPreviousJoke() {
   const joke = jokeHistory[currentHistoryIndex];
   showCardControls();
   isShowingMeme = false;
-  renderJoke(joke);
-  reflectVoteState(joke);
+  showJokeCard(joke);
   startPrefetch();
 }
 
@@ -81,12 +81,31 @@ function hideCardControls() {
   if (votePill) votePill.classList.add('hidden');
   if (submitBtn) submitBtn.classList.add('hidden');
     if (nextBtn) nextBtn.classList.add('hidden');
+    if (shareBtn) shareBtn.classList.add('hidden');
 }
 
 function showCardControls() {
   if (votePill) votePill.classList.remove('hidden');
   if (submitBtn) submitBtn.classList.remove('hidden');
     if (nextBtn) nextBtn.classList.remove('hidden');
+    if (shareBtn) shareBtn.classList.remove('hidden');
+}
+
+// Single choke point for putting a joke on screen: renders it, syncs the
+// vote buttons, and points the address bar at its shareable URL (/j/<id>).
+function showJokeCard(joke) {
+  renderJoke(joke);
+  reflectVoteState(joke);
+  updateShareUrl(joke);
+}
+
+// Deep-link boot: /j/<id> (or ?j=<id>) opens that exact joke. Stale or
+// bogus ids fall back to a fresh random joke with a toast.
+async function loadSharedJoke(id) {
+  const joke = await fetchJokeById(id);
+  if (joke) return adoptJoke(joke);
+  showToast('That link is stale — here is a fresh one instead.');
+  return fetchRandomJoke();
 }
 
 async function loadInitialState() {
@@ -95,9 +114,10 @@ async function loadInitialState() {
   renderMemeCard({ url: FIXED_INITIAL_LOADING_GIF_URL }, DEFAULT_MALAYALAM_LOADING_MSG);
 
   // 2. Fetch memes and initial joke in parallel
+  const sharedId = parseSharedJokeId();
   const [memes, joke] = await Promise.all([
     fetchLoadingMemes(),
-    fetchRandomJoke(),
+    sharedId ? loadSharedJoke(sharedId) : fetchRandomJoke(),
   ]);
 
   // Preload next meme in background for upcoming meme break
@@ -108,10 +128,9 @@ async function loadInitialState() {
     autoNextTimeout = setTimeout(() => {
       showCardControls();
       isShowingMeme = false;
-      renderJoke(joke);
+      showJokeCard(joke);
       jokesViewedCount++;
       pushJokeToHistory(joke);
-      reflectVoteState(joke);
       // Trigger card swipe hint wiggle to let users know cards are swipable!
       triggerSwipeHint(jokeCard);
     }, 1500);
@@ -126,7 +145,7 @@ async function loadAndShowNextJoke() {
   showCardControls();
   isShowingMeme = false;
   const joke = await fetchRandomJoke();
-  renderJoke(joke);
+  showJokeCard(joke);
   if (joke) {
     jokesViewedCount++;
     pushJokeToHistory(joke)
@@ -134,7 +153,6 @@ async function loadAndShowNextJoke() {
       preloadNextMeme();
     }
   }
-  reflectVoteState(joke);
 }
 
 function triggerNextCard() {
@@ -296,6 +314,7 @@ if (jokeCard) {
 }
 
 initSubmitForm();
+initShare();
 loadInitialState();
 
 // Handle keyboard navigation (left and right arrow keys)

@@ -51,6 +51,8 @@ async function request(path, { method = 'GET', body, params, admin = false } = {
 export const api = {
   getNextJoke: () => request('/api/jokes/next'),
 
+  getJokeById: (id) => request(`/api/jokes/${encodeURIComponent(id)}`),
+
   getMemes: (tag) => request('/api/memes', { params: { tag } }),
 
   castVote: (jokeId, upvoteDelta, downvoteDelta) =>

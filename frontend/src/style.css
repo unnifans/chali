@@ -827,3 +827,91 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     display: none;
   }
 }
+
+/* ---------- Share ---------- */
+
+.share-btn {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.85rem;
+  padding: 12px;
+  border: 2px solid var(--text-primary);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 var(--text-primary);
+}
+.share-btn:hover:not(:disabled) { background: var(--pill-bg); }
+.share-btn:active:not(:disabled) { box-shadow: 1px 1px 0 var(--text-primary); }
+
+.share-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.share-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 18, 10, 0.55);
+}
+
+.share-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 540px;
+  background: var(--card-bg);
+  border: 2px solid var(--text-primary);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 0 rgba(34, 27, 18, 0.25);
+  padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.share-panel h3 {
+  font-family: var(--font-headline);
+  font-size: 1.2rem;
+  margin: 0 0 14px 0;
+  text-align: center;
+}
+
+.share-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.share-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--pill-bg);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  padding: 13px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+}
+.share-opt:hover { border-color: var(--accent-rust); color: var(--accent-rust); }
+.share-opt:active { box-shadow: 1px 1px 0 var(--text-primary); }
+
+.share-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  font-size: 1.05rem;
+}
+
+/* hide the fixed GitHub tab while the share sheet is open */
+.sharing-open .github-contribute {
+  display: none;
+}

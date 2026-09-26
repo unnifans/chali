@@ -91,6 +91,7 @@
           <button id="downvote-btn" class="vote-btn vote-btn-down" aria-label="Chali Joke"><span class="vote-emoji">😡</span> <span class="vote-label">Kashtam</span></button>
         </div>
                 <button id="next-btn" class="next-btn">Next Joke <span class="arrow">→</span></button>
+        <button id="share-btn" class="share-btn" type="button">↗ Share this joke</button>
         <button id="show-submit-btn" class="submit-toggle-btn" type="button">
           <span class="submit-toggle-icon">✎</span><u>Got a chali?</u>
         </button>
@@ -146,6 +147,23 @@
 
   
 
+  </div>
+
+  <!-- Share sheet -->
+  <div id="share-sheet" class="share-sheet hidden" role="dialog" aria-modal="true" aria-label="Share this joke">
+    <div class="share-backdrop" id="share-backdrop"></div>
+    <div class="share-panel">
+      <h3>Share this joke</h3>
+      <div class="share-grid">
+        <button class="share-opt" data-share="whatsapp" type="button"><span class="share-ico">💬</span>WhatsApp</button>
+        <button class="share-opt" data-share="instagram" type="button"><span class="share-ico">📸</span>Instagram</button>
+        <button class="share-opt" data-share="x" type="button"><span class="share-ico">𝕏</span>X</button>
+        <button class="share-opt" data-share="facebook" type="button"><span class="share-ico">f</span>Facebook</button>
+        <button class="share-opt" data-share="copy" type="button"><span class="share-ico">🔗</span>Copy link</button>
+        <button class="share-opt hidden" data-share="native" id="share-native-btn" type="button"><span class="share-ico">📤</span>More…</button>
+      </div>
+      <button id="share-close" class="btn-cancel" type="button">Close</button>
+    </div>
   </div>
 
   <div id="toast" class="toast"></div>
