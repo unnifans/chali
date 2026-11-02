@@ -84,11 +84,17 @@ function hideCardControls() {
     if (shareBtn) shareBtn.classList.add('hidden');
 }
 
-function showCardControls() {
-  if (votePill) votePill.classList.remove('hidden');
-  if (submitBtn) submitBtn.classList.remove('hidden');
-    if (nextBtn) nextBtn.classList.remove('hidden');
+function showCardControls(hasJoke = true) {
+  if (hasJoke) {
+    if (votePill) votePill.classList.remove('hidden');
     if (shareBtn) shareBtn.classList.remove('hidden');
+    if (nextBtn) nextBtn.classList.remove('hidden');
+  } else {
+    if (votePill) votePill.classList.add('hidden');
+    if (shareBtn) shareBtn.classList.add('hidden');
+    if (nextBtn) nextBtn.classList.remove('hidden');
+  }
+  if (submitBtn) submitBtn.classList.remove('hidden');
 }
 
 // Single choke point for putting a joke on screen: renders it, syncs the
@@ -109,49 +115,77 @@ async function loadSharedJoke(id) {
 }
 
 async function loadInitialState() {
+  clearAutoNext();
   // 1. Hide controls and immediately render fixed GIF + Malayalam loading text together on frame 1
   hideCardControls();
   renderMemeCard({ url: FIXED_INITIAL_LOADING_GIF_URL }, DEFAULT_MALAYALAM_LOADING_MSG);
 
-  // 2. Fetch memes and initial joke in parallel
-  const sharedId = parseSharedJokeId();
-  const [memes, joke] = await Promise.all([
-    fetchLoadingMemes(),
-    sharedId ? loadSharedJoke(sharedId) : fetchRandomJoke(),
-  ]);
+  try {
+    // 2. Fetch memes and initial joke in parallel (auxiliary failure won't block joke load)
+    const sharedId = parseSharedJokeId();
+    const [memesResult, jokeResult] = await Promise.allSettled([
+      fetchLoadingMemes(),
+      sharedId ? loadSharedJoke(sharedId) : fetchRandomJoke(),
+    ]);
 
-  // Preload next meme in background for upcoming meme break
-  preloadNextMeme();
+    const joke = jokeResult.status === 'fulfilled' ? jokeResult.value : null;
 
-  // 3. Automatically transition to initial joke in 1.5 seconds
-  if (joke) {
-    autoNextTimeout = setTimeout(() => {
-      showCardControls();
+    // Preload next meme in background for upcoming meme break
+    try {
+      preloadNextMeme();
+    } catch (e) {
+      console.warn('Failed to preload next meme:', e);
+    }
+
+    // 3. Automatically transition to initial joke in 1.5 seconds
+    if (joke) {
+      autoNextTimeout = setTimeout(() => {
+        showCardControls(true);
+        isShowingMeme = false;
+        showJokeCard(joke);
+        jokesViewedCount++;
+        pushJokeToHistory(joke);
+        // Trigger card swipe hint wiggle to let users know cards are swipable!
+        triggerSwipeHint(jokeCard);
+      }, 1500);
+    } else {
       isShowingMeme = false;
-      showJokeCard(joke);
-      jokesViewedCount++;
-      pushJokeToHistory(joke);
-      // Trigger card swipe hint wiggle to let users know cards are swipable!
-      triggerSwipeHint(jokeCard);
-    }, 1500);
-  } else {
-    showCardControls();
-    renderJoke(null);
+      showCardControls(false);
+      reflectVoteState(null);
+      renderJoke(null, () => loadInitialState());
+    }
+  } catch (err) {
+    console.error('Failed to load initial state:', err);
+    isShowingMeme = false;
+    showCardControls(false);
+    reflectVoteState(null);
+    renderJoke(null, () => loadInitialState());
   }
 }
 
 async function loadAndShowNextJoke() {
   clearAutoNext();
-  showCardControls();
+  showCardControls(true);
   isShowingMeme = false;
-  const joke = await fetchRandomJoke();
-  showJokeCard(joke);
-  if (joke) {
-    jokesViewedCount++;
-    pushJokeToHistory(joke)
-    if (jokesViewedCount % 5 == 0) {
-      preloadNextMeme();
+  try {
+    const joke = await fetchRandomJoke();
+    if (joke) {
+      showJokeCard(joke);
+      jokesViewedCount++;
+      pushJokeToHistory(joke);
+      if (jokesViewedCount % 5 === 0) {
+        preloadNextMeme();
+      }
+    } else {
+      showCardControls(false);
+      reflectVoteState(null);
+      renderJoke(null, () => loadAndShowNextJoke());
     }
+  } catch (err) {
+    console.error('Failed to load next joke:', err);
+    showCardControls(false);
+    reflectVoteState(null);
+    renderJoke(null, () => loadAndShowNextJoke());
   }
 }
 
