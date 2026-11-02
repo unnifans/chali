@@ -1,3 +1,5 @@
+/assets/*      /assets/:splat  404
+/j/assets/*    /j/assets/:splat 404
 /admin        /admin.html   200
 /admin/       /admin.html   200
 /admin/*      /admin.html   200

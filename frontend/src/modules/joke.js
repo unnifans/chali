@@ -119,10 +119,23 @@ export function applyVoteResult(jokeId, upvotes, downvotes, status) {
   }
 }
 
-export function renderJoke(joke) {
+export function renderJoke(joke, onRetry = null) {
   const root = document.getElementById('joke-root');
   if (!joke) {
-    root.innerHTML = `<p class="empty-state">No jokes available right now. Check back soon!</p>`;
+    if (onRetry) {
+      root.innerHTML = `
+        <div class="joke-error-container">
+          <p class="joke-error-msg">Failed to load chali.</p>
+          <button id="retry-btn" class="retry-btn" type="button">↻ Try Again</button>
+        </div>
+      `;
+      const retryBtn = document.getElementById('retry-btn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', onRetry);
+      }
+    } else {
+      root.innerHTML = `<p class="empty-state">No jokes available right now. Check back soon!</p>`;
+    }
     root.scrollTop = 0;
     updateVoteScore(null);
     return;
